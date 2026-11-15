@@ -358,19 +358,19 @@
                                         Spacing="8"
                                         VerticalAlignment="Center">
                                         <ToggleSwitch
-                                            IsOn="{x:Bind IsEnabled, Mode=OneWay}"
+                                            IsOn="{x:Bind IsEnabled, Mode=OneTime}"
                                             MinWidth="0"
-                                            Tag="{x:Bind}"
+                                            Tag="{x:Bind Mode=OneTime}"
                                             Toggled="OnRuleToggled" />
                                         <Button
                                             Click="OnEditRuleClick"
-                                            Tag="{x:Bind}"
+                                            Tag="{x:Bind Mode=OneTime}"
                                             ToolTipService.ToolTip="Chỉnh sửa quy tắc">
                                             <FontIcon FontSize="14" Glyph="&#xE70F;" />
                                         </Button>
                                         <Button
                                             Click="OnDeleteRuleClick"
-                                            Tag="{x:Bind}"
+                                            Tag="{x:Bind Mode=OneTime}"
                                             ToolTipService.ToolTip="Xóa quy tắc">
                                             <FontIcon FontSize="14" Glyph="&#xE74D;" />
                                         </Button>

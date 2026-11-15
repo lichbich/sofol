@@ -45,7 +45,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: Sofol-*-win-x64.zip
+          files: |
+            Sofol-*-win-x64.zip
+            SofolSetup.exe
           generate_release_notes: true
           draft: false
           prerelease: false

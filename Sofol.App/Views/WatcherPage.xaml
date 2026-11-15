@@ -247,7 +247,7 @@
                             <TextBlock
                                 FontFamily="Cascadia Mono, Consolas"
                                 FontSize="12"
-                                Text="{x:Bind}"
+                                Text="{x:Bind Mode=OneTime}"
                                 TextWrapping="Wrap" />
                         </DataTemplate>
                     </ListView.ItemTemplate>

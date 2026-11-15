@@ -49,6 +49,7 @@ public sealed class SystemTrayHelper : IDisposable
     private readonly IntPtr _hwnd;
     private readonly SUBCLASSPROC _subclassDelegate;
     private readonly uint _taskbarCreatedMsg;
+    private readonly uint _showInstanceMsg;
 
     private IntPtr _hIcon;
     private bool _iconAdded;
@@ -56,7 +57,7 @@ public sealed class SystemTrayHelper : IDisposable
 
     public event Action<int, int>? TrayIconClicked;
     public event Action? TrayIconDoubleClicked;
-    public event Action? MinimizeRequested;
+    public event Action? ShowInstanceRequested;
     public event Action? OpenAppRequested;
     public event Action? ExitAppRequested;
     public event Action? ContextMenuOpening;
@@ -162,6 +163,7 @@ public sealed class SystemTrayHelper : IDisposable
     {
         _hwnd = hwnd;
         _taskbarCreatedMsg = RegisterWindowMessageW("TaskbarCreated");
+        _showInstanceMsg = RegisterWindowMessageW("Sofol_App_ShowInstance_Message");
         _subclassDelegate = SubclassWindowProc;
 
         try
@@ -237,9 +239,9 @@ public sealed class SystemTrayHelper : IDisposable
 
     private IntPtr SubclassWindowProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, UIntPtr uIdSubclass, UIntPtr dwRefData)
     {
-        if (uMsg == WmSysCommand && (wParam.ToInt64() & 0xFFF0) == ScMinimize)
+        if (uMsg == _showInstanceMsg)
         {
-            MinimizeRequested?.Invoke();
+            ShowInstanceRequested?.Invoke();
             return IntPtr.Zero;
         }
 

@@ -7,6 +7,17 @@ namespace Sofol.App;
 
 public partial class App : Application
 {
+    private static System.Threading.Mutex? _instanceMutex;
+    private const string MutexName = "Global\\Sofol_App_SingleInstance_Mutex";
+    private const string ShowInstanceMessage = "Sofol_App_ShowInstance_Message";
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    private static extern uint RegisterWindowMessageW(string lpString);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool PostMessageW(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
     private Window? _window;
 
     public static MainViewModel ViewModel { get; } = new();
@@ -58,6 +69,24 @@ public partial class App : Application
             _window = setupWin;
             ApplyThemeToWindow(setupWin, ViewModel.SelectedThemeIndex);
             setupWin.Activate();
+            return;
+        }
+
+        bool isNewInstance;
+        try
+        {
+            _instanceMutex = new System.Threading.Mutex(true, MutexName, out isNewInstance);
+        }
+        catch
+        {
+            isNewInstance = false;
+        }
+
+        if (!isNewInstance)
+        {
+            uint msg = RegisterWindowMessageW(ShowInstanceMessage);
+            PostMessageW((IntPtr)0xFFFF, msg, IntPtr.Zero, IntPtr.Zero);
+            Environment.Exit(0);
             return;
         }
 

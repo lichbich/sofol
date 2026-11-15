@@ -96,12 +96,12 @@
                                 <Button
                                     Click="OnViewDetailsClick"
                                     Content="Xem chi tiết"
-                                    Tag="{x:Bind}" />
+                                    Tag="{x:Bind Mode=OneTime}" />
                                 <Button
                                     Click="OnUndoSessionClick"
                                     IsEnabled="{x:Bind IsUndone, Converter={StaticResource InverseBoolConverter}}"
                                     Style="{StaticResource AccentButtonStyle}"
-                                    Tag="{x:Bind}">
+                                    Tag="{x:Bind Mode=OneTime}">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <FontIcon FontSize="14" Glyph="&#xE7A7;" />
                                         <TextBlock Text="Hoàn tác" />

@@ -3,7 +3,7 @@
     x:Class="Sofol.App.Views.GuideWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="Chào mừng đến với Sofol — Hướng dẫn &amp; Minh họa">
+    Title="Chào mừng đến với Sofol — Hướng dẫn sử dụng">
 
     <Window.SystemBackdrop>
         <MicaBackdrop Kind="BaseAlt" />
@@ -73,7 +73,7 @@
                     FontSize="12"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     VerticalAlignment="Center"
-                    Text="Hướng dẫn trực quan &amp; Minh họa tính năng" />
+                    Text="Hướng dẫn sử dụng" />
             </StackPanel>
         </Grid>
 

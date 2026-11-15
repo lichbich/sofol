@@ -89,7 +89,7 @@ public sealed partial class MainWindow : Window
     {
         string iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "AppLogo.ico");
         _trayHelper = new SystemTrayHelper(_hwnd, iconPath, GetTrayTooltipText());
-        _trayHelper.MinimizeRequested += () => DispatcherQueue.TryEnqueue(MinimizeToTray);
+        _trayHelper.ShowInstanceRequested += () => DispatcherQueue.TryEnqueue(RestoreFromTray);
         _trayHelper.TrayIconClicked += (x, y) => DispatcherQueue.TryEnqueue(() => TrayPopupWindow.ToggleAtTray(x, y));
         _trayHelper.TrayIconDoubleClicked += () => DispatcherQueue.TryEnqueue(RestoreFromTray);
         _trayHelper.ContextMenuOpening += () => DispatcherQueue.TryEnqueue(() => TrayPopupWindow.CurrentInstance?.HidePopup());
@@ -112,17 +112,7 @@ public sealed partial class MainWindow : Window
 
     private void OnAppWindowChanged(AppWindow sender, AppWindowChangedEventArgs args)
     {
-        if (_isExiting)
-        {
-            return;
-        }
-
-        if (args.DidPresenterChange &&
-            sender.Presenter is OverlappedPresenter presenter &&
-            presenter.State == OverlappedPresenterState.Minimized)
-        {
-            DispatcherQueue.TryEnqueue(MinimizeToTray);
-        }
+        // Giữ ứng dụng hiển thị bình thường trên Taskbar/Dock khi thu nhỏ (Minimize) hoặc chuyển đổi ứng dụng
     }
 
     public void MinimizeToTray()

@@ -71,7 +71,7 @@
             </NavigationView.MenuItems>
 
             <NavigationView.FooterMenuItems>
-                <NavigationViewItem Content="Hướng dẫn &amp; Minh họa" SelectsOnInvoked="False" Tag="guide">
+                <NavigationViewItem Content="Hướng dẫn" SelectsOnInvoked="False" Tag="guide">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE897;" />
                     </NavigationViewItem.Icon>

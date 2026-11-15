@@ -169,12 +169,12 @@
                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
                             <TextBlock
                                 Style="{StaticResource BodyStrongTextBlockStyle}"
-                                Text="Cô lập tệp dung lượng lớn"
+                                Text="Gom riêng tệp có dung lượng lớn"
                                 TextWrapping="Wrap" />
                             <TextBlock
                                 FontSize="12.5"
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                Text="Đưa các tệp vượt quá ngưỡng dung lượng (MB) vào thư mục riêng để dễ dọn dẹp ổ cứng."
+                                Text="Chuyển các tệp nặng hơn mức này vào một thư mục riêng để bạn dễ quản lý dung lượng ổ đĩa."
                                 TextWrapping="Wrap" />
                         </StackPanel>
 
@@ -217,12 +217,12 @@
                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
                             <TextBlock
                                 Style="{StaticResource BodyStrongTextBlockStyle}"
-                                Text="Gom tệp chưa phân loại vào thư mục 'Khác'"
+                                Text="Gom tệp chưa phân loại vào thư mục riêng"
                                 TextWrapping="Wrap" />
                             <TextBlock
                                 FontSize="12.5"
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                Text="Các tệp không khớp quy tắc nào sẽ được gom vào thư mục riêng thay vì để nguyên ở gốc."
+                                Text="Các tệp không thuộc quy tắc nào sẽ được chuyển vào thư mục này thay vì để lẫn ở thư mục gốc."
                                 TextWrapping="Wrap" />
                         </StackPanel>
 
@@ -243,9 +243,9 @@
                 </Border>
             </StackPanel>
 
-            <!-- Dữ liệu & Lưu trữ -->
+            <!-- Dữ liệu ứng dụng -->
             <StackPanel Spacing="8">
-                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Cấu hình &amp; Nhật ký cục bộ" />
+                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Dữ liệu ứng dụng" />
 
                 <Border Padding="16,14" Style="{StaticResource FluentCardStyle}">
                     <Grid ColumnSpacing="16">
@@ -267,7 +267,7 @@
                         <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
                             <TextBlock
                                 Style="{StaticResource BodyStrongTextBlockStyle}"
-                                Text="Thư mục lưu cấu hình &amp; lịch sử Undo"
+                                Text="Nơi lưu cài đặt và lịch sử hoàn tác"
                                 TextWrapping="Wrap" />
                             <TextBlock
                                 FontFamily="Cascadia Mono, Consolas"
@@ -286,9 +286,9 @@
                 </Border>
             </StackPanel>
 
-            <!-- Cập nhật ứng dụng từ GitHub Releases -->
+            <!-- Cập nhật ứng dụng -->
             <StackPanel Spacing="8">
-                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Cập nhật ứng dụng &amp; Thông tin phát hành" />
+                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Cập nhật ứng dụng" />
 
                 <Border Padding="16,14" Style="{StaticResource FluentCardStyle}">
                     <StackPanel Spacing="14">
@@ -322,13 +322,13 @@
                                             FontSize="11"
                                             FontWeight="SemiBold"
                                             Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                            Text="v1.0.0 (Bản chính thức)" />
+                                            Text="v1.1.0 (Bản mới nhất)" />
                                     </Border>
                                 </StackPanel>
                                 <TextBlock
                                     FontSize="12.5"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Text="Ứng dụng tự động kiểm tra và nhận bản cập nhật mới nhất trực tiếp từ GitHub Releases."
+                                    Text="Kiểm tra và nhận các tính năng mới nhất cho ứng dụng."
                                     TextWrapping="Wrap" />
                             </StackPanel>
 
@@ -365,39 +365,11 @@
                                 <TextBlock
                                     FontSize="13"
                                     FontWeight="SemiBold"
-                                    Text="Kho lưu trữ GitHub (Repository)" />
-                                <TextBlock
-                                    FontSize="12"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Text="Định dạng: tên-tài-khoản/tên-repo (ví dụ: trong/Sofol)." />
-                            </StackPanel>
-
-                            <TextBox
-                                Grid.Column="2"
-                                Width="220"
-                                VerticalAlignment="Center"
-                                PlaceholderText="username/repo"
-                                Text="{x:Bind ViewModel.GitHubRepository, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        </Grid>
-
-                        <Grid ColumnSpacing="16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <Border Width="36" Height="1" />
-
-                            <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                <TextBlock
-                                    FontSize="13"
-                                    FontWeight="SemiBold"
                                     Text="Tự động kiểm tra bản cập nhật khi mở ứng dụng" />
                                 <TextBlock
                                     FontSize="12"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Text="Nhắc bạn ngay khi tác giả phát hành bản cập nhật mới trên GitHub." />
+                                    Text="Tự động thông báo khi có phiên bản mới." />
                             </StackPanel>
 
                             <ToggleSwitch

@@ -45,7 +45,7 @@
                             FontSize="11"
                             FontWeight="SemiBold"
                             Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                            Text="v1.0.0" />
+                            Text="v1.1.0" />
                     </Border>
                 </StackPanel>
                 <TextBlock

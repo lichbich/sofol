@@ -13,9 +13,56 @@ namespace Sofol.App.Helpers;
 public static class InstallationHelper
 {
     public const string AppName = "Sofol";
-    public const string AppDisplayName = "Sofol - Trình Sắp Xếp Tệp Thông Minh";
+    public const string AppDisplayName = "Sofol";
     public const string AppPublisher = "Sofol";
-    public const string AppVersion = "1.0.0";
+    public const string AppVersion = "1.1.0";
+
+    [ComImport]
+    [Guid("00021401-0000-0000-C000-000000000046")]
+    private class ShellLinkClass
+    {
+    }
+
+    [ComImport]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [Guid("000214F9-0000-0000-C000-000000000046")]
+    private interface IShellLinkW
+    {
+        void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszFile, int cchMaxPath, out IntPtr pfd, uint fFlags);
+        void GetIDList(out IntPtr ppidl);
+        void SetIDList(IntPtr pidl);
+        void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszName, int cchMaxName);
+        void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string pszName);
+        void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszDir, int cchMaxPath);
+        void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string pszDir);
+        void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszArgs, int cchMaxPath);
+        void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string pszArgs);
+        void GetHotkey(out short pwHotkey);
+        void SetHotkey(short wHotkey);
+        void GetShowCmd(out int piShowCmd);
+        void SetShowCmd(int iShowCmd);
+        void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] System.Text.StringBuilder pszIconPath, int cchIconPath, out int piIcon);
+        void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string pszIconPath, int iIcon);
+        void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string pszPathRel, uint dwReserved);
+        void Resolve(IntPtr hwnd, uint fFlags);
+        void SetPath([MarshalAs(UnmanagedType.LPWStr)] string pszFile);
+    }
+
+    [ComImport]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [Guid("0000010b-0000-0000-C000-000000000046")]
+    private interface IPersistFile
+    {
+        void GetClassID(out Guid pClassID);
+        void IsDirty();
+        void Load([MarshalAs(UnmanagedType.LPWStr)] string pszFileName, uint dwMode);
+        void Save([MarshalAs(UnmanagedType.LPWStr)] string pszFileName, [MarshalAs(UnmanagedType.Bool)] bool fRemember);
+        void SaveCompleted([MarshalAs(UnmanagedType.LPWStr)] string pszFileName);
+        void GetCurFile([Out, MarshalAs(UnmanagedType.LPWStr)] string ppszFileName);
+    }
+
+    [DllImport("shell32.dll")]
+    private static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
 
     public static string GetDefaultInstallationDirectory()
     {
@@ -81,8 +128,9 @@ public static class InstallationHelper
         if (createDesktopShortcut)
         {
             string desktopDir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-            string desktopShortcut = Path.Combine(desktopDir, $"{AppDisplayName}.lnk");
-            CreateShortcut(desktopShortcut, installedExePath, targetDir, iconPath, AppDisplayName);
+            Directory.CreateDirectory(desktopDir);
+            string desktopShortcut = Path.Combine(desktopDir, "Sofol.lnk");
+            CreateShortcut(desktopShortcut, installedExePath, targetDir, iconPath, "Sofol - Sắp xếp tệp thông minh");
         }
 
         if (createStartMenuShortcut)
@@ -90,8 +138,9 @@ public static class InstallationHelper
             string startMenuDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 @"Microsoft\Windows\Start Menu\Programs");
-            string startMenuShortcut = Path.Combine(startMenuDir, $"{AppDisplayName}.lnk");
-            CreateShortcut(startMenuShortcut, installedExePath, targetDir, iconPath, AppDisplayName);
+            Directory.CreateDirectory(startMenuDir);
+            string startMenuShortcut = Path.Combine(startMenuDir, "Sofol.lnk");
+            CreateShortcut(startMenuShortcut, installedExePath, targetDir, iconPath, "Sofol - Sắp xếp tệp thông minh");
         }
 
         progress.Report((0.92, "Đang đăng ký cấu hình Windows..."));
@@ -106,23 +155,34 @@ public static class InstallationHelper
     {
         try
         {
-            Type? shellType = Type.GetTypeFromProgID("WScript.Shell");
-            if (shellType is null)
+            var link = (IShellLinkW)new ShellLinkClass();
+            link.SetPath(targetExePath);
+            link.SetWorkingDirectory(workingDir);
+            link.SetDescription(description);
+            if (!string.IsNullOrEmpty(iconPath) && File.Exists(iconPath))
             {
-                return;
+                link.SetIconLocation(iconPath, 0);
             }
+            var persistFile = (IPersistFile)link;
+            persistFile.Save(shortcutPath, false);
 
-            dynamic shell = Activator.CreateInstance(shellType)!;
-            dynamic shortcut = shell.CreateShortcut(shortcutPath);
-            shortcut.TargetPath = targetExePath;
-            shortcut.WorkingDirectory = workingDir;
-            shortcut.IconLocation = $"{iconPath},0";
-            shortcut.Description = description;
-            shortcut.Save();
+            SHChangeNotify(0x08000000 /* SHCNE_ASSOCCHANGED */, 0x0000 /* SHCNF_IDLIST */, IntPtr.Zero, IntPtr.Zero);
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"Không thể tạo lối tắt {shortcutPath}: {ex.Message}");
+            Debug.WriteLine($"COM shortcut error: {ex.Message}. Using PowerShell fallback...");
+            try
+            {
+                string ps = $"$w = New-Object -ComObject WScript.Shell; $s = $w.CreateShortcut('{shortcutPath}'); $s.TargetPath = '{targetExePath}'; $s.WorkingDirectory = '{workingDir}'; $s.IconLocation = '{iconPath},0'; $s.Description = '{description}'; $s.Save();";
+                using var p = Process.Start(new ProcessStartInfo("powershell.exe", $"-NoProfile -Command \"{ps}\"") { CreateNoWindow = true, UseShellExecute = false });
+                p?.WaitForExit(3000);
+
+                SHChangeNotify(0x08000000, 0, IntPtr.Zero, IntPtr.Zero);
+            }
+            catch (Exception fallbackEx)
+            {
+                Debug.WriteLine($"PowerShell shortcut fallback failed: {fallbackEx.Message}");
+            }
         }
     }
 
@@ -207,21 +267,23 @@ public static class InstallationHelper
         {
             // Xóa lối tắt Desktop
             string desktopDir = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-            string desktopShortcut = Path.Combine(desktopDir, $"{AppDisplayName}.lnk");
-            if (File.Exists(desktopShortcut))
+            foreach (string name in new[] { "Sofol.lnk", "Sofol - Trình Sắp Xếp Tệp Thông Minh.lnk" })
             {
-                File.Delete(desktopShortcut);
+                string sc = Path.Combine(desktopDir, name);
+                if (File.Exists(sc)) File.Delete(sc);
             }
 
             // Xóa lối tắt Start Menu
             string startMenuDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 @"Microsoft\Windows\Start Menu\Programs");
-            string startMenuShortcut = Path.Combine(startMenuDir, $"{AppDisplayName}.lnk");
-            if (File.Exists(startMenuShortcut))
+            foreach (string name in new[] { "Sofol.lnk", "Sofol - Trình Sắp Xếp Tệp Thông Minh.lnk" })
             {
-                File.Delete(startMenuShortcut);
+                string sc = Path.Combine(startMenuDir, name);
+                if (File.Exists(sc)) File.Delete(sc);
             }
+
+            SHChangeNotify(0x08000000, 0, IntPtr.Zero, IntPtr.Zero);
 
             // Tắt khởi động cùng Windows & Xóa registry
             SetRunAtStartup(false, string.Empty);
