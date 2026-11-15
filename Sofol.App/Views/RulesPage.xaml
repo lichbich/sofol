@@ -1,0 +1,386 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Sofol.App.Views.RulesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:models="using:Sofol.Core.Models">
+
+    <ScrollViewer
+        Padding="28,20,28,28"
+        HorizontalScrollBarVisibility="Disabled"
+        HorizontalScrollMode="Disabled"
+        VerticalScrollBarVisibility="Auto">
+        <StackPanel HorizontalAlignment="Stretch" Spacing="20">
+
+            <!-- Tiêu đề -->
+            <Grid ColumnSpacing="16" RowSpacing="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock
+                    Grid.Row="0"
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    Style="{StaticResource TitleTextBlockStyle}"
+                    Text="Thiết lập Quy tắc"
+                    TextWrapping="Wrap" />
+
+                <StackPanel
+                    Grid.Row="0"
+                    Grid.Column="1"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    VerticalAlignment="Center">
+                    <Button Click="OnRestoreDefaultsClick" Content="Khôi phục mặc định" />
+                    <Button Click="OnAddRuleClick" Style="{StaticResource AccentButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon FontSize="14" Glyph="&#xE710;" />
+                            <TextBlock Text="Thêm quy tắc mới" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <TextBlock
+                    Grid.Row="1"
+                    Grid.Column="0"
+                    Grid.ColumnSpan="2"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="Tùy biến định dạng tệp nào vào thư mục nào, lọc theo từ khóa và tinh chỉnh thuật toán gom cụm tên giống nhau."
+                    TextWrapping="Wrap" />
+            </Grid>
+
+            <!-- Nhóm 1: Gom cụm tên thông minh -->
+            <StackPanel Spacing="8">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                        Text="Gom nhóm thông minh theo tên tệp"
+                        TextWrapping="Wrap" />
+                    <HyperlinkButton
+                        Grid.Column="1"
+                        Click="OnOpenSmartGroupingGuideClick"
+                        Padding="6,2">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon FontSize="13" Glyph="&#xE897;" />
+                            <TextBlock FontSize="12.5" Text="Xem hình minh họa &amp; Mô phỏng 3 chế độ gom cụm" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </HyperlinkButton>
+                </Grid>
+
+                <!-- Thẻ bật tắt chính Smart Grouping -->
+                <Border Padding="16,14" Style="{StaticResource FluentCardStyle}">
+                    <Grid ColumnSpacing="14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border
+                            Width="36"
+                            Height="36"
+                            VerticalAlignment="Center"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            CornerRadius="8">
+                            <FontIcon FontSize="17" Glyph="&#xE945;" />
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                            <TextBlock
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="Bật gom cụm tệp giống tên (Smart Grouping)"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                FontSize="12.5"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="Tự động nhận diện các tệp có chung phần gốc hoặc tên gần giống nhau (ví dụ: Book_Exported.docx, Book_Exported (1).docx) để gom vào một thư mục riêng."
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <ToggleSwitch
+                            Grid.Column="2"
+                            MinWidth="0"
+                            VerticalAlignment="Center"
+                            IsOn="{x:Bind ViewModel.EnablePrefixSimilarityGrouping, Mode=TwoWay}" />
+                    </Grid>
+                </Border>
+
+                <!-- Các thẻ tùy chọn con chuẩn responsive -->
+                <StackPanel Margin="16,0,0,0" Spacing="8">
+                    <Border Padding="16,12" Style="{StaticResource FluentCardStyle}">
+                        <Grid ColumnSpacing="14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Spacing="3" VerticalAlignment="Center">
+                                <TextBlock
+                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                    Text="Số tệp tối thiểu tạo thư mục cụm"
+                                    TextWrapping="Wrap" />
+                                <TextBlock
+                                    FontSize="12.5"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="Chỉ gom nhóm khi tìm thấy ít nhất N tệp giống tên nhau (mặc định 2). Nếu chỉ có 1 tệp lẻ thì không tạo thư mục cụm mà chuyển sang xử lý theo quy tắc đuôi tệp."
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <NumberBox
+                                Grid.Column="1"
+                                Width="156"
+                                VerticalAlignment="Center"
+                                Minimum="2"
+                                Maximum="10"
+                                SpinButtonPlacementMode="Inline"
+                                Value="{x:Bind ViewModel.MinFilesForPrefixGroup, Mode=TwoWay}" />
+                        </Grid>
+                    </Border>
+
+                    <Border Padding="16,12" Style="{StaticResource FluentCardStyle}">
+                        <Grid ColumnSpacing="14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Spacing="3" VerticalAlignment="Center">
+                                <TextBlock
+                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                    Text="Ngưỡng độ tương đồng tên (%)"
+                                    TextWrapping="Wrap" />
+                                <TextBlock
+                                    FontSize="12.5"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="Tỷ lệ giống nhau giữa hai tên tệp (mặc định 80%). Giá trị càng cao thì điều kiện gom càng chặt."
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <StackPanel
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="10"
+                                VerticalAlignment="Center">
+                                <Slider
+                                    Width="150"
+                                    Minimum="55"
+                                    Maximum="95"
+                                    StepFrequency="5"
+                                    Value="{x:Bind ViewModel.SimilarityThresholdPercent, Mode=TwoWay}" />
+                                <TextBlock
+                                    Width="40"
+                                    VerticalAlignment="Center"
+                                    FontWeight="SemiBold">
+                                    <Run Text="{x:Bind ViewModel.SimilarityThresholdPercent, Mode=OneWay}" /><Run Text="%" />
+                                </TextBlock>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Border Padding="16,12" Style="{StaticResource FluentCardStyle}">
+                        <Grid ColumnSpacing="14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Spacing="3" VerticalAlignment="Center">
+                                <TextBlock
+                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                    Text="Đặt các cụm tên vào thư mục cha chung"
+                                    TextWrapping="Wrap" />
+                                <TextBlock
+                                    FontSize="12.5"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="Gom các cụm tên chưa có quy tắc phân loại riêng vào chung 1 thư mục cha này (ví dụ: Gom theo tên\GGKEY_01) thay vì tạo ngoài thư mục gốc."
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <StackPanel
+                                Grid.Column="1"
+                                Orientation="Horizontal"
+                                Spacing="10"
+                                VerticalAlignment="Center">
+                                <TextBox
+                                    Width="145"
+                                    IsEnabled="{x:Bind ViewModel.UseDedicatedSmartRootFolder, Mode=OneWay}"
+                                    Text="{x:Bind ViewModel.PrefixGroupRootFolderName, Mode=TwoWay}" />
+                                <ToggleSwitch
+                                    MinWidth="0"
+                                    IsOn="{x:Bind ViewModel.UseDedicatedSmartRootFolder, Mode=TwoWay}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Border Padding="16,12" Style="{StaticResource FluentCardStyle}">
+                        <Grid ColumnSpacing="14">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Spacing="3" VerticalAlignment="Center">
+                                <TextBlock
+                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                    Text="Lồng cụm tên vào thư mục của quy tắc"
+                                    TextWrapping="Wrap" />
+                                <TextBlock
+                                    FontSize="12.5"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="Nếu các tệp giống tên đã khớp một quy tắc đang bật, tạo thư mục cụm lồng bên trong thư mục đích của quy tắc đó (ví dụ: Tài liệu\BaoCao hay Book test\Book_Exported)."
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <ToggleSwitch
+                                Grid.Column="1"
+                                MinWidth="0"
+                                VerticalAlignment="Center"
+                                IsOn="{x:Bind ViewModel.GroupPrefixInsideCategory, Mode=TwoWay}" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Nhóm 2: Danh sách quy tắc phân loại -->
+            <StackPanel Spacing="10">
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        Style="{StaticResource BodyStrongTextBlockStyle}"
+                        Text="Danh sách quy tắc theo định dạng &amp; từ khóa"
+                        TextWrapping="Wrap" />
+                    <StackPanel
+                        Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="8"
+                        VerticalAlignment="Center">
+                        <Button Click="OnEnableAllRulesClick" Content="Bật tất cả" />
+                        <Button Click="OnDisableAllRulesClick" Content="Tắt tất cả" />
+                        <ToggleSwitch
+                            IsOn="{x:Bind ViewModel.EnableKeywordRules, Mode=TwoWay}"
+                            MinWidth="0"
+                            OffContent="So khớp từ khóa: Tắt"
+                            OnContent="So khớp từ khóa: Bật" />
+                    </StackPanel>
+                </Grid>
+
+                <ItemsControl ItemsSource="{x:Bind ViewModel.Rules}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:OrganizationRule">
+                            <Border
+                                Margin="0,0,0,8"
+                                Padding="16,12"
+                                Style="{StaticResource FluentCardStyle}">
+                                <Grid ColumnSpacing="14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border
+                                        Width="40"
+                                        Height="40"
+                                        VerticalAlignment="Center"
+                                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                        CornerRadius="8">
+                                        <FontIcon
+                                            FontSize="18"
+                                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                            Glyph="{x:Bind IconGlyph}" />
+                                    </Border>
+
+                                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                        <Grid ColumnSpacing="8" HorizontalAlignment="Left">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock
+                                                Grid.Column="0"
+                                                FontWeight="SemiBold"
+                                                Text="{x:Bind Name}"
+                                                TextWrapping="Wrap"
+                                                VerticalAlignment="Center" />
+                                            <Border
+                                                Grid.Column="1"
+                                                Padding="8,2"
+                                                VerticalAlignment="Center"
+                                                Background="{ThemeResource SubtleFillColorTertiaryBrush}"
+                                                CornerRadius="10">
+                                                <TextBlock FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                                    <Run Text="→ " /><Run Text="{x:Bind TargetFolderName}" />
+                                                </TextBlock>
+                                            </Border>
+                                            <Border
+                                                Grid.Column="2"
+                                                Padding="6,2"
+                                                VerticalAlignment="Center"
+                                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                CornerRadius="10">
+                                                <TextBlock FontSize="11" Foreground="{ThemeResource TextFillColorTertiaryBrush}">
+                                                    <Run Text="Ưu tiên #" /><Run Text="{x:Bind Priority}" />
+                                                </TextBlock>
+                                            </Border>
+                                        </Grid>
+                                        <TextBlock
+                                            FontSize="12"
+                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                            Text="{x:Bind ExtensionsDisplay}"
+                                            TextWrapping="Wrap" />
+                                        <TextBlock
+                                            FontSize="11"
+                                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                            TextWrapping="Wrap">
+                                            <Run Text="Từ khóa: " /><Run Text="{x:Bind KeywordsDisplay}" />
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <StackPanel
+                                        Grid.Column="2"
+                                        Orientation="Horizontal"
+                                        Spacing="8"
+                                        VerticalAlignment="Center">
+                                        <ToggleSwitch
+                                            IsOn="{x:Bind IsEnabled, Mode=OneWay}"
+                                            MinWidth="0"
+                                            Tag="{x:Bind}"
+                                            Toggled="OnRuleToggled" />
+                                        <Button
+                                            Click="OnEditRuleClick"
+                                            Tag="{x:Bind}"
+                                            ToolTipService.ToolTip="Chỉnh sửa quy tắc">
+                                            <FontIcon FontSize="14" Glyph="&#xE70F;" />
+                                        </Button>
+                                        <Button
+                                            Click="OnDeleteRuleClick"
+                                            Tag="{x:Bind}"
+                                            ToolTipService.ToolTip="Xóa quy tắc">
+                                            <FontIcon FontSize="14" Glyph="&#xE74D;" />
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

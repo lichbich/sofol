@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Sofol.App.Views.DashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:Sofol.App.ViewModels">
+
+    <Grid Padding="28,20,28,24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Tiêu đề trang -->
+        <Grid Grid.Row="0" ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Spacing="4">
+                <TextBlock
+                    Style="{StaticResource TitleTextBlockStyle}"
+                    Text="Dọn dẹp &amp; Xem trước"
+                    TextWrapping="Wrap" />
+                <TextBlock
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="Quét thư mục, tự động nhận diện cụm tệp giống tên và xem trước nơi lưu trữ trước khi di chuyển."
+                    TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel
+                Grid.Column="1"
+                Orientation="Horizontal"
+                Spacing="8"
+                VerticalAlignment="Top">
+                <Button Click="OnCreateDemoSandboxClick" ToolTipService.ToolTip="Tạo thư mục mẫu mô phỏng Downloads lộn xộn để thử nghiệm an toàn">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE945;" />
+                        <TextBlock Text="Tạo thư mục Test mẫu" />
+                    </StackPanel>
+                </Button>
+                <Button Click="OnOpenFolderClick" ToolTipService.ToolTip="Mở thư mục đang chọn trong File Explorer">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="14" Glyph="&#xE8A7;" />
+                        <TextBlock Text="Mở Explorer" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!-- Thanh chọn thư mục mục tiêu -->
+        <Border Grid.Row="1" Style="{StaticResource FluentCardStyle}" Padding="16,14">
+            <Grid RowSpacing="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox
+                        x:Name="FolderPathTextBox"
+                        KeyDown="OnFolderPathKeyDown"
+                        PlaceholderText="Nhập hoặc chọn đường dẫn thư mục cần sắp xếp (ví dụ: C:\Users\...\Downloads)"
+                        Text="{x:Bind ViewModel.TargetFolderPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <Button
+                        Grid.Column="1"
+                        Click="OnBrowseFolderClick"
+                        Style="{StaticResource AccentButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon FontSize="14" Glyph="&#xE838;" />
+                            <TextBlock Text="Chọn thư mục..." />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="Chọn nhanh:" />
+                    <Button Click="OnQuickDownloadsClick" Padding="10,4" FontSize="12">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon FontSize="12" Glyph="&#xE896;" />
+                            <TextBlock Text="Downloads" />
+                        </StackPanel>
+                    </Button>
+                    <Button Click="OnQuickDesktopClick" Padding="10,4" FontSize="12">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon FontSize="12" Glyph="&#xE7F4;" />
+                            <TextBlock Text="Desktop" />
+                        </StackPanel>
+                    </Button>
+                    <Button Click="OnQuickDocumentsClick" Padding="10,4" FontSize="12">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon FontSize="12" Glyph="&#xE8A5;" />
+                            <TextBlock Text="Documents" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Thông báo kết quả InfoBar -->
+        <InfoBar
+            Grid.Row="2"
+            IsOpen="{x:Bind ViewModel.IsInfoBarOpen, Mode=TwoWay}"
+            Message="{x:Bind ViewModel.InfoBarMessage, Mode=OneWay}"
+            Severity="{x:Bind ViewModel.InfoBarSeverity, Mode=OneWay}"
+            Title="{x:Bind ViewModel.InfoBarTitle, Mode=OneWay}" />
+
+        <!-- Bảng Xem trước (Preview Table) -->
+        <Border Grid.Row="3" Style="{StaticResource FluentCardStyle}" Padding="0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Thanh tìm kiếm & bật tắt nhanh -->
+                <Grid
+                    Grid.Row="0"
+                    Padding="16,12"
+                    BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="0,0,0,1"
+                    ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox
+                        Grid.Column="0"
+                        MinWidth="150"
+                        PlaceholderText="Tìm theo tên tệp, quy tắc hoặc thư mục đích..."
+                        Text="{x:Bind ViewModel.SearchQuery, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                    <ComboBox
+                        Grid.Column="1"
+                        SelectedIndex="{x:Bind ViewModel.SelectedFilterIndex, Mode=TwoWay}"
+                        Width="195">
+                        <ComboBoxItem Content="Tất cả tệp" />
+                        <ComboBoxItem Content="Cụm tên thông minh" />
+                        <ComboBoxItem Content="Sẵn sàng di chuyển" />
+                        <ComboBoxItem Content="Không di chuyển / Giữ nguyên" />
+                    </ComboBox>
+
+                    <ToggleSwitch
+                        Grid.Column="2"
+                        IsOn="{x:Bind ViewModel.EnablePrefixSimilarityGrouping, Mode=TwoWay}"
+                        OffContent="Gom tên giống: Tắt"
+                        OnContent="Gom tên giống: Bật"
+                        MinWidth="0" />
+
+                    <ToggleSwitch
+                        Grid.Column="3"
+                        IsOn="{x:Bind ViewModel.EnableExtensionRules, Mode=TwoWay}"
+                        OffContent="Theo đuôi: Tắt"
+                        OnContent="Theo đuôi: Bật"
+                        MinWidth="0" />
+                </Grid>
+
+                <!-- Tiêu đề cột -->
+                <Grid
+                    Grid.Row="1"
+                    Padding="16,10"
+                    Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                    BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                    BorderThickness="0,0,0,1"
+                    ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="36" />
+                        <ColumnDefinition Width="2.2*" />
+                        <ColumnDefinition Width="1.2*" />
+                        <ColumnDefinition Width="1.6*" />
+                        <ColumnDefinition Width="86" />
+                        <ColumnDefinition Width="1.1*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" HorizontalAlignment="Center" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Chọn" />
+                    <TextBlock Grid.Column="1" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Tên tệp hiện tại" />
+                    <TextBlock Grid.Column="2" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Phân loại / Quy tắc" />
+                    <TextBlock Grid.Column="3" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Thư mục đích dự kiến" />
+                    <TextBlock Grid.Column="4" HorizontalAlignment="Right" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Dung lượng" />
+                    <TextBlock Grid.Column="5" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Trạng thái" />
+                </Grid>
+
+                <!-- Danh sách tệp Preview -->
+                <ListView
+                    Grid.Row="2"
+                    ItemsSource="{x:Bind ViewModel.FilteredPreviewItems}"
+                    SelectionMode="None">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="16,6" />
+                            <Setter Property="MinHeight" Value="44" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PlanItemViewModel">
+                            <Grid ColumnSpacing="12" Opacity="{x:Bind RowOpacity, Mode=OneWay}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="36" />
+                                    <ColumnDefinition Width="2.2*" />
+                                    <ColumnDefinition Width="1.2*" />
+                                    <ColumnDefinition Width="1.6*" />
+                                    <ColumnDefinition Width="86" />
+                                    <ColumnDefinition Width="1.1*" />
+                                </Grid.ColumnDefinitions>
+
+                                <CheckBox
+                                    Grid.Column="0"
+                                    MinWidth="0"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    IsChecked="{x:Bind IsSelected, Mode=TwoWay}"
+                                    IsEnabled="{x:Bind CanSelect, Mode=OneWay}" />
+
+                                <Grid
+                                    Grid.Column="1"
+                                    ColumnSpacing="10"
+                                    VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon
+                                        Grid.Column="0"
+                                        FontSize="16"
+                                        Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                                        Glyph="{x:Bind IconGlyph}" />
+                                    <StackPanel Grid.Column="1" Spacing="1">
+                                        <TextBlock
+                                            FontWeight="Medium"
+                                            Text="{x:Bind FileName}"
+                                            TextTrimming="CharacterEllipsis"
+                                            ToolTipService.ToolTip="{x:Bind SourcePath}" />
+                                        <TextBlock
+                                            FontSize="11"
+                                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                            Text="{x:Bind LastModifiedDisplay}"
+                                            TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <Border
+                                    Grid.Column="2"
+                                    Padding="10,4"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    Background="{x:Bind RuleBadgeType, Converter={StaticResource BadgeBackgroundConverter}}"
+                                    CornerRadius="12"
+                                    ToolTipService.ToolTip="{x:Bind MatchedRuleName}">
+                                    <TextBlock
+                                        FontSize="12"
+                                        FontWeight="SemiBold"
+                                        Foreground="{x:Bind RuleBadgeType, Converter={StaticResource BadgeForegroundConverter}}"
+                                        Text="{x:Bind MatchedRuleName}"
+                                        TextTrimming="CharacterEllipsis" />
+                                </Border>
+
+                                <Grid
+                                    Grid.Column="3"
+                                    ColumnSpacing="6"
+                                    VerticalAlignment="Center">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <FontIcon
+                                        Grid.Column="0"
+                                        FontSize="14"
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Glyph="&#xE8B7;" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        Text="{x:Bind ProposedTargetFolder}"
+                                        TextTrimming="CharacterEllipsis"
+                                        ToolTipService.ToolTip="{x:Bind ProposedTargetFolder}" />
+                                </Grid>
+
+                                <TextBlock
+                                    Grid.Column="4"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center"
+                                    FontSize="12"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="{x:Bind FormattedSize}" />
+
+                                <TextBlock
+                                    Grid.Column="5"
+                                    VerticalAlignment="Center"
+                                    FontSize="12"
+                                    Foreground="{x:Bind Status, Mode=OneWay, Converter={StaticResource StatusForegroundConverter}}"
+                                    Text="{x:Bind StatusText, Mode=OneWay}"
+                                    TextTrimming="CharacterEllipsis"
+                                    ToolTipService.ToolTip="{x:Bind StatusText, Mode=OneWay}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+
+                <!-- Trạng thái trống -->
+                <StackPanel
+                    Grid.Row="2"
+                    Padding="24"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="8"
+                    Visibility="{x:Bind ViewModel.HasNoPreviewItems, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <FontIcon
+                        HorizontalAlignment="Center"
+                        FontSize="42"
+                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                        Glyph="&#xE73E;" />
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        Style="{StaticResource SubtitleTextBlockStyle}"
+                        Text="Thư mục này đã gọn gàng hoặc không có tệp khớp bộ lọc"
+                        TextAlignment="Center"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="Chọn thư mục khác hoặc bấm 'Tạo thư mục Test mẫu' ở góc trên để trải nghiệm ngay."
+                        TextAlignment="Center"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Thanh tác vụ dưới cùng -->
+        <Border Grid.Row="4" Style="{StaticResource FluentCardStyle}" Padding="16,12">
+            <Grid RowSpacing="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel
+                    Grid.Row="0"
+                    Spacing="4"
+                    Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <TextBlock
+                        FontSize="12"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{x:Bind ViewModel.ProgressText, Mode=OneWay}" />
+                    <ProgressBar Maximum="100" Value="{x:Bind ViewModel.ProgressValue, Mode=OneWay}" />
+                </StackPanel>
+
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Command="{x:Bind ViewModel.AnalyzeFolderCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon FontSize="14" Glyph="&#xE72C;" />
+                                <TextBlock Text="Phân tích lại" />
+                            </StackPanel>
+                        </Button>
+                        <Button Command="{x:Bind ViewModel.SelectAllReadyCommand}" Content="Chọn tất cả" />
+                        <Button Command="{x:Bind ViewModel.UnselectAllCommand}" Content="Bỏ chọn" />
+                        <Button
+                            Command="{x:Bind ViewModel.UndoLatestSessionCommand}"
+                            IsEnabled="{x:Bind ViewModel.CanUndoLatestSession, Mode=OneWay}"
+                            ToolTipService.ToolTip="{x:Bind ViewModel.LatestUndoSummary, Mode=OneWay}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon FontSize="14" Glyph="&#xE7A7;" />
+                                <TextBlock Text="Hoàn tác gần nhất" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <Button
+                        Grid.Column="1"
+                        Command="{x:Bind ViewModel.OrganizeNowCommand}"
+                        IsEnabled="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource InverseBoolConverter}}"
+                        Padding="20,9"
+                        Style="{StaticResource AccentButtonStyle}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon FontSize="15" Glyph="&#xE8FB;" />
+                            <TextBlock FontWeight="SemiBold">
+                                <Run Text="Sắp xếp ngay (" /><Run Text="{x:Bind ViewModel.SelectedReadyCount, Mode=OneWay}" /><Run Text=" tệp)" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</Page>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Sofol.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Sofol - Sắp xếp tệp thông minh">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop Kind="BaseAlt" />
+    </Window.SystemBackdrop>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="44" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Custom TitleBar chuẩn Windows 11 -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Padding="18,0,0,0" Background="Transparent">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <Image
+                    Width="26"
+                    Height="26"
+                    VerticalAlignment="Center"
+                    Source="ms-appx:///Assets/AppLogo.png"
+                    Stretch="Uniform" />
+                <TextBlock
+                    FontSize="13"
+                    FontWeight="SemiBold"
+                    VerticalAlignment="Center"
+                    Text="Sofol" />
+                <TextBlock
+                    FontSize="12"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    VerticalAlignment="Center"
+                    Text="Trình Sắp Xếp Tệp Thông Minh cho Windows 11" />
+            </StackPanel>
+        </Grid>
+
+        <NavigationView
+            x:Name="NavView"
+            Grid.Row="1"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            ItemInvoked="OnNavItemInvoked"
+            OpenPaneLength="235"
+            PaneDisplayMode="Left"
+            SelectionChanged="OnNavSelectionChanged">
+
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Dọn dẹp &amp; Xem trước" Tag="dashboard">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE80F;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Thiết lập Quy tắc" Tag="rules">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE71C;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Tự động sắp xếp" Tag="watcher">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE7C4;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Lịch sử &amp; Hoàn tác" Tag="history">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE81C;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <NavigationView.FooterMenuItems>
+                <NavigationViewItem Content="Hướng dẫn &amp; Minh họa" SelectsOnInvoked="False" Tag="guide">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE897;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="Cài đặt" Tag="settings">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE713;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.FooterMenuItems>
+
+            <Frame x:Name="ContentFrame" />
+        </NavigationView>
+    </Grid>
+</Window>

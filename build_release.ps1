@@ -1,0 +1,56 @@
+# Script tự động biên dịch bản phát hành (Release) và đóng gói cho Sofol
+$ErrorActionPreference = "Stop"
+
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $scriptDir
+
+$version = "1.0.0"
+$distDir = Join-Path $scriptDir "dist"
+$packageDir = Join-Path $distDir "Sofol-v$version-win-x64"
+$zipPath = Join-Path $distDir "Sofol-v$version-win-x64.zip"
+
+Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host "     BẮT ĐẦU BIÊN DỊCH VÀ ĐÓNG GÓI SOFOL v$version" -ForegroundColor Cyan
+Write-Host "==========================================================" -ForegroundColor Cyan
+
+# 1. Dọn dẹp thư mục dist cũ
+if (Test-Path $distDir) {
+    Write-Host "--> Dọn dẹp thư mục dist cũ..." -ForegroundColor Yellow
+    Remove-Item -Path $distDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
+
+# 2. Biên dịch Release Unpackaged Self-Contained x64
+Write-Host "`n--> Đang biên dịch Release cho win-x64 (Self-Contained)..." -ForegroundColor Yellow
+$projectPath = Join-Path $scriptDir "Sofol.App\Sofol.App.csproj"
+dotnet publish $projectPath -c Release -r win-x64 --self-contained true -p:PublishTrimmed=false -o $packageDir
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Biên dịch thất bại!"
+    exit 1
+}
+
+# 3. Tạo file Cài đặt Sofol (Setup).exe (bản sao của Sofol.App.exe để khi người dùng mở sẽ kích hoạt giao diện Setup WinUI 3)
+$appExe = Join-Path $packageDir "Sofol.App.exe"
+$setupExe = Join-Path $packageDir "Cài đặt Sofol (Setup).exe"
+Copy-Item -Path $appExe -Destination $setupExe -Force
+Write-Host "--> Đã tạo file kích hoạt cài đặt: 'Cài đặt Sofol (Setup).exe'" -ForegroundColor Green
+
+# 4. Nén thành file zip phân phối
+Write-Host "`n--> Đang nén thành $zipPath..." -ForegroundColor Yellow
+Compress-Archive -Path "$packageDir\*" -DestinationPath $zipPath -CompressionLevel Optimal
+
+# 5. Xuất thông tin gói phát hành
+$zipItem = Get-Item $zipPath
+$zipSizeMB = [Math]::Round($zipItem.Length / (1024 * 1024), 2)
+$hash = (Get-FileHash -Path $zipPath -Algorithm SHA256).Hash
+
+Write-Host "`n==========================================================" -ForegroundColor Green
+Write-Host "             ĐÓNG GÓI THÀNH CÔNG!" -ForegroundColor Green
+Write-Host "==========================================================" -ForegroundColor Green
+Write-Host "Phiên bản   : v$version"
+Write-Host "Thư mục gói : $packageDir"
+Write-Host "File nén    : $zipPath"
+Write-Host "Dung lượng  : $zipSizeMB MB"
+Write-Host "SHA256      : $hash"
+Write-Host "`nFile sẵn sàng để upload lên GitHub Releases: $zipPath" -ForegroundColor Cyan

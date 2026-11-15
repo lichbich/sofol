@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Sofol.App.Views.SetupWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Cài đặt Sofol - Trình Sắp Xếp Tệp Thông Minh">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop Kind="BaseAlt" />
+    </Window.SystemBackdrop>
+
+    <Grid Padding="28,24,28,24" RowSpacing="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header: Logo + App Name + Version -->
+        <Grid Grid.Row="0" ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Image
+                Width="52"
+                Height="52"
+                VerticalAlignment="Center"
+                Source="ms-appx:///Assets/AppLogo.png"
+                Stretch="Uniform" />
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="3">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock
+                        FontSize="20"
+                        FontWeight="SemiBold"
+                        Text="Cài đặt Sofol" />
+                    <Border
+                        Padding="8,2"
+                        VerticalAlignment="Center"
+                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                        CornerRadius="8">
+                        <TextBlock
+                            FontSize="11"
+                            FontWeight="SemiBold"
+                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                            Text="v1.0.0" />
+                    </Border>
+                </StackPanel>
+                <TextBlock
+                    FontSize="13"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="Trình Sắp Xếp Tệp Thông Minh &amp; Tự Động cho Windows 11" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Body: Cấu hình cài đặt hoặc gỡ cài đặt -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="16">
+                <!-- Chế độ Cài đặt -->
+                <StackPanel x:Name="InstallPanel" Spacing="16">
+                    <!-- Thư mục cài đặt -->
+                    <Border Padding="16,14" Style="{StaticResource FluentCardStyle}">
+                        <StackPanel Spacing="10">
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Thư mục cài đặt chương trình" />
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox
+                                    x:Name="InstallPathTextBox"
+                                    VerticalAlignment="Center"
+                                    PlaceholderText="Đường dẫn thư mục cài đặt" />
+                                <Button
+                                    x:Name="BrowseFolderButton"
+                                    Grid.Column="1"
+                                    VerticalAlignment="Center"
+                                    Click="OnBrowseFolderClick"
+                                    Content="Duyệt..." />
+                            </Grid>
+                            <TextBlock
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="Cài đặt chuẩn theo từng người dùng (Per-User), không yêu cầu quyền Admin UAC và dễ dàng tự động cập nhật."
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Tùy chọn lối tắt -->
+                    <Border Padding="16,14" Style="{StaticResource FluentCardStyle}">
+                        <StackPanel Spacing="10">
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Tùy chọn lối tắt &amp; Khởi động" />
+                            <CheckBox
+                                x:Name="DesktopShortcutCheckBox"
+                                Content="Tạo biểu tượng lối tắt ngoài Màn hình chính (Desktop)"
+                                IsChecked="True" />
+                            <CheckBox
+                                x:Name="StartMenuShortcutCheckBox"
+                                Content="Tạo lối tắt trong Menu Bắt đầu (Start Menu)"
+                                IsChecked="True" />
+                            <CheckBox
+                                x:Name="RunAtStartupCheckBox"
+                                Content="Tự động khởi động cùng Windows (chạy ngầm dưới khay hệ thống)"
+                                IsChecked="True" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Chế độ Gỡ cài đặt (Ẩn mặc định) -->
+                <Border
+                    x:Name="UninstallPanel"
+                    Padding="16,14"
+                    Style="{StaticResource FluentCardStyle}"
+                    Visibility="Collapsed">
+                    <StackPanel Spacing="12">
+                        <TextBlock
+                            Style="{StaticResource SubtitleTextBlockStyle}"
+                            Text="Gỡ cài đặt Sofol khỏi máy tính" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="Thao tác này sẽ xóa ứng dụng Sofol, toàn bộ lối tắt và hủy đăng ký tự khởi động cùng Windows. Dữ liệu tệp bạn đã sắp xếp trước đó sẽ được giữ nguyên."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Khu vực Tiến trình (Progress) -->
+                <StackPanel x:Name="ProgressArea" Spacing="8" Visibility="Collapsed">
+                    <ProgressBar x:Name="InstallProgressBar" Minimum="0" Maximum="1" Value="0" />
+                    <TextBlock
+                        x:Name="StatusTextBlock"
+                        FontSize="12.5"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="Đang chuẩn bị..."
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer: Nút hành động -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock
+                x:Name="FooterInfoText"
+                VerticalAlignment="Center"
+                FontSize="12"
+                Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                Text="Bản quyền © 2026 Sofol. Thiết kế cho Windows 11." />
+
+            <StackPanel
+                Grid.Column="1"
+                Orientation="Horizontal"
+                Spacing="10">
+                <Button
+                    x:Name="CancelButton"
+                    Click="OnCancelClick"
+                    Content="Hủy bỏ" />
+                <Button
+                    x:Name="ActionButton"
+                    Click="OnActionButtonClick"
+                    Style="{StaticResource AccentButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon x:Name="ActionIcon" FontSize="14" Glyph="&#xE896;" />
+                        <TextBlock x:Name="ActionText" Text="Cài đặt ngay" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

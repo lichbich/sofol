@@ -1,0 +1,326 @@
+<Window
+    x:Class="Sofol.App.Views.TrayPopupWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="Sofol - Bảng điều khiển nhanh"
+    mc:Ignorable="d">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop Kind="BaseAlt" />
+    </Window.SystemBackdrop>
+
+    <StackPanel
+        x:Name="RootGrid"
+        Padding="20,18,20,20"
+        HorizontalAlignment="Stretch"
+        VerticalAlignment="Top"
+        Spacing="12">
+        <StackPanel.RenderTransform>
+            <CompositeTransform x:Name="PopupSlideTransform" />
+        </StackPanel.RenderTransform>
+        <StackPanel.ChildrenTransitions>
+            <TransitionCollection>
+                <RepositionThemeTransition />
+            </TransitionCollection>
+        </StackPanel.ChildrenTransitions>
+
+        <!--  Header: App Logo + Title + Compact Status Pill  -->
+        <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel
+                Grid.Column="0"
+                VerticalAlignment="Center"
+                Orientation="Horizontal"
+                Spacing="10">
+                <Image
+                    Width="28"
+                    Height="28"
+                    Source="ms-appx:///Assets/AppLogo.png"
+                    Stretch="Uniform" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    FontSize="15"
+                    FontWeight="SemiBold"
+                    Text="Sofol" />
+            </StackPanel>
+
+            <Border
+                Grid.Column="1"
+                Padding="10,4"
+                VerticalAlignment="Center"
+                Background="{x:Bind BadgeBg(ViewModel.IsWatcherRunning), Mode=OneWay}"
+                CornerRadius="12">
+                <TextBlock
+                    FontSize="11.5"
+                    FontWeight="SemiBold"
+                    Foreground="{x:Bind BadgeFg(ViewModel.IsWatcherRunning), Mode=OneWay}"
+                    Text="{x:Bind ViewModel.WatcherCompactBadgeText, Mode=OneWay}" />
+            </Border>
+        </Grid>
+
+        <!--  Card 1: Target Folder + Auto-Sort Status & Toggle  -->
+        <Border
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="10">
+            <StackPanel>
+                <!--  Top: Monitored Folder  -->
+                <Grid
+                    Padding="14,12"
+                    ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border
+                        Grid.Column="0"
+                        Width="34"
+                        Height="34"
+                        VerticalAlignment="Center"
+                        Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                        CornerRadius="8">
+                        <FontIcon
+                            FontSize="16"
+                            Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                            Glyph="&#xE8B7;" />
+                    </Border>
+
+                    <StackPanel
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Spacing="2">
+                        <TextBlock
+                            FontSize="13.5"
+                            FontWeight="SemiBold"
+                            MaxLines="1"
+                            Text="{x:Bind ViewModel.TargetFolderDisplayName, Mode=OneWay}"
+                            TextTrimming="CharacterEllipsis" />
+                        <TextBlock
+                            FontSize="11.5"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            MaxLines="1"
+                            Text="{x:Bind ViewModel.TargetFolderPath, Mode=OneWay}"
+                            TextTrimming="CharacterEllipsis"
+                            ToolTipService.ToolTip="{x:Bind ViewModel.TargetFolderPath, Mode=OneWay}" />
+                    </StackPanel>
+
+                    <Button
+                        Grid.Column="2"
+                        Padding="10,6"
+                        VerticalAlignment="Center"
+                        AutomationProperties.Name="Mở Explorer"
+                        Click="OnOpenFolderClick"
+                        ToolTipService.ToolTip="Mở thư mục trong File Explorer">
+                        <StackPanel
+                            Orientation="Horizontal"
+                            Spacing="6">
+                            <FontIcon
+                                FontSize="12"
+                                Glyph="&#xE8DA;" />
+                            <TextBlock
+                                FontSize="12"
+                                Text="Mở Explorer" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <!--  Divider  -->
+                <Border
+                    Height="1"
+                    Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+                <!--  Bottom: Auto-Sort Toggle Row  -->
+                <Grid
+                    Padding="14,12"
+                    ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        Spacing="2">
+                        <TextBlock
+                            FontSize="13.5"
+                            FontWeight="SemiBold"
+                            Text="Tự động sắp xếp" />
+                        <TextBlock
+                            FontSize="11.5"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{x:Bind ViewModel.WatcherCompactDelayText, Mode=OneWay}"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <Button
+                        x:Name="ToggleWatcherButton"
+                        Grid.Column="1"
+                        MinWidth="112"
+                        Padding="12,7"
+                        VerticalAlignment="Center"
+                        AutomationProperties.Name="{x:Bind ViewModel.WatcherCompactActionText, Mode=OneWay}"
+                        Click="OnToggleWatcherClick">
+                        <StackPanel
+                            Orientation="Horizontal"
+                            Spacing="6">
+                            <FontIcon
+                                FontSize="12"
+                                Foreground="{x:Bind ToggleIconFg(ViewModel.IsWatcherRunning), Mode=OneWay}"
+                                Glyph="{x:Bind ViewModel.WatcherActionButtonGlyph, Mode=OneWay}" />
+                            <TextBlock
+                                FontSize="12.5"
+                                FontWeight="SemiBold"
+                                Text="{x:Bind ViewModel.WatcherCompactActionText, Mode=OneWay}" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!--  Row 2: Quick Action Buttons  -->
+        <Grid ColumnSpacing="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Button
+                x:Name="QuickOrganizeButton"
+                Grid.Column="0"
+                Height="38"
+                HorizontalAlignment="Stretch"
+                AutomationProperties.Name="Dọn dẹp ngay"
+                Click="OnQuickOrganizeClick"
+                Style="{ThemeResource AccentButtonStyle}">
+                <StackPanel
+                    Orientation="Horizontal"
+                    Spacing="7">
+                    <FontIcon
+                        FontSize="13"
+                        Glyph="&#xE945;" />
+                    <TextBlock
+                        FontSize="13"
+                        FontWeight="SemiBold"
+                        Text="Dọn dẹp ngay" />
+                </StackPanel>
+            </Button>
+
+            <Button
+                Grid.Column="1"
+                Height="38"
+                HorizontalAlignment="Stretch"
+                AutomationProperties.Name="Thêm nhanh quy tắc"
+                Click="OnToggleQuickRuleClick">
+                <StackPanel
+                    Orientation="Horizontal"
+                    Spacing="7">
+                    <FontIcon
+                        FontSize="13"
+                        Glyph="&#xE710;" />
+                    <TextBlock
+                        FontSize="13"
+                        FontWeight="SemiBold"
+                        Text="Thêm nhanh quy tắc" />
+                </StackPanel>
+            </Button>
+        </Grid>
+
+        <!--  Row 3: Collapsible Quick Add Rule Form  -->
+        <Border
+            x:Name="QuickRulePanel"
+            Padding="14"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1"
+            CornerRadius="10"
+            Visibility="Collapsed">
+            <StackPanel Spacing="10">
+                <TextBlock
+                    FontSize="13.5"
+                    FontWeight="SemiBold"
+                    Text="Thêm nhanh quy tắc" />
+
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox
+                        x:Name="QuickRuleNameBox"
+                        Grid.Column="0"
+                        Header="Tên quy tắc"
+                        PlaceholderText="VD: Hóa đơn" />
+
+                    <TextBox
+                        x:Name="QuickRuleFolderBox"
+                        Grid.Column="1"
+                        Header="Thư mục đích"
+                        PlaceholderText="VD: Hóa đơn" />
+                </Grid>
+
+                <TextBox
+                    x:Name="QuickRuleExtBox"
+                    Header="Đuôi tệp (cách nhau bằng dấu phẩy)"
+                    PlaceholderText=".pdf, .xlsx" />
+
+                <TextBox
+                    x:Name="QuickRuleKeywordBox"
+                    Header="Từ khóa tên tệp (tùy chọn)"
+                    PlaceholderText="hoa don, invoice" />
+
+                <TextBlock
+                    x:Name="QuickRuleErrorText"
+                    FontSize="11.5"
+                    Foreground="#C42B1C"
+                    TextWrapping="Wrap"
+                    Visibility="Collapsed" />
+
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Button
+                        Grid.Column="0"
+                        Height="36"
+                        HorizontalAlignment="Stretch"
+                        Click="OnSaveQuickRuleClick"
+                        Style="{ThemeResource AccentButtonStyle}"
+                        Content="Lưu quy tắc" />
+
+                    <Button
+                        Grid.Column="1"
+                        Height="36"
+                        Padding="16,0"
+                        Click="OnCancelQuickRuleClick"
+                        Content="Hủy" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!--  Row 4: Feedback Message Banner  -->
+        <Border
+            x:Name="FeedbackBorder"
+            Padding="12,9"
+            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+            CornerRadius="8"
+            Visibility="Collapsed">
+            <TextBlock
+                x:Name="FeedbackTextBlock"
+                FontSize="12"
+                TextWrapping="Wrap" />
+        </Border>
+    </StackPanel>
+</Window>

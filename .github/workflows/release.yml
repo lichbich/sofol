@@ -1,0 +1,53 @@
+name: Build & Release Sofol
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore Sofol.sln
+
+      - name: Run Unit Tests
+        run: dotnet test Sofol.Tests --verbosity normal --no-restore
+
+      - name: Publish WinUI 3 App (Release Self-Contained x64)
+        run: |
+          dotnet publish Sofol.App\Sofol.App.csproj -c Release -r win-x64 --self-contained true -p:PublishTrimmed=false -o publish\Sofol
+
+      - name: Create Setup Launcher & Package Zip
+        shell: pwsh
+        run: |
+          $tag = if ($env:GITHUB_REF_NAME) { $env:GITHUB_REF_NAME } else { "v1.0.0" }
+          Copy-Item -Path "publish\Sofol\Sofol.App.exe" -Destination "publish\Sofol\Cài đặt Sofol (Setup).exe" -Force
+          $zipName = "Sofol-$tag-win-x64.zip"
+          Compress-Archive -Path "publish\Sofol\*" -DestinationPath $zipName -CompressionLevel Optimal
+          Write-Host "Created release package: $zipName"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: Sofol-*-win-x64.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

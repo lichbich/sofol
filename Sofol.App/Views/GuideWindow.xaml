@@ -1,0 +1,894 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="Sofol.App.Views.GuideWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Chào mừng đến với Sofol — Hướng dẫn &amp; Minh họa">
+
+    <Window.SystemBackdrop>
+        <MicaBackdrop Kind="BaseAlt" />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="RootLayout">
+        <Grid.Resources>
+            <!-- Shared card styles inside GuideWindow -->
+            <Style x:Key="MiniWindowCardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource SolidBackgroundFillColorBaseBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="10" />
+                <Setter Property="Padding" Value="12" />
+            </Style>
+
+            <Style x:Key="HowToCardStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource LayerFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="14,12" />
+            </Style>
+
+            <Style x:Key="KeyBadgeStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="Padding" Value="10,4" />
+            </Style>
+
+            <Style x:Key="FileItemPillStyle" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource SubtleFillColorSecondaryBrush}" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="Padding" Value="8,5" />
+            </Style>
+
+            <Style x:Key="HeroOuterBorderStyle" TargetType="Border">
+                <Setter Property="CornerRadius" Value="0" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="BorderThickness" Value="0,0,0,1" />
+                <Setter Property="Padding" Value="24,20" />
+            </Style>
+        </Grid.Resources>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="44" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Custom TitleBar kiểu PowerToys Welcome -->
+        <Grid x:Name="GuideTitleBar" Grid.Row="0" Padding="18,0,0,0">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <Image
+                    Width="26"
+                    Height="26"
+                    VerticalAlignment="Center"
+                    Source="ms-appx:///Assets/AppLogo.png"
+                    Stretch="Uniform" />
+                <TextBlock
+                    FontSize="13"
+                    FontWeight="SemiBold"
+                    VerticalAlignment="Center"
+                    Text="Chào mừng đến với Sofol" />
+                <TextBlock
+                    FontSize="12"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    VerticalAlignment="Center"
+                    Text="Hướng dẫn trực quan &amp; Minh họa tính năng" />
+            </StackPanel>
+        </Grid>
+
+        <NavigationView
+            x:Name="GuideNavView"
+            Grid.Row="1"
+            CompactModeThresholdWidth="500"
+            ExpandedModeThresholdWidth="500"
+            IsBackButtonVisible="Collapsed"
+            IsPaneToggleButtonVisible="False"
+            IsSettingsVisible="False"
+            OpenPaneLength="250"
+            PaneDisplayMode="Left"
+            SelectionChanged="OnGuideNavSelectionChanged">
+
+            <NavigationView.MenuItems>
+                <NavigationViewItem Tag="getting_started">
+                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <Border Width="22" Height="22" Background="#0078D4" CornerRadius="5">
+                            <FontIcon FontSize="11" Foreground="White" Glyph="&#xE80F;" />
+                        </Border>
+                        <TextBlock VerticalAlignment="Center" Text="Bắt đầu nhanh" />
+                    </StackPanel>
+                </NavigationViewItem>
+
+                <NavigationViewItem Tag="smart_grouping">
+                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <Border Width="22" Height="22" Background="#744DA9" CornerRadius="5">
+                            <FontIcon FontSize="11" Foreground="White" Glyph="&#xE945;" />
+                        </Border>
+                        <TextBlock VerticalAlignment="Center" Text="Gom cụm tên thông minh" />
+                    </StackPanel>
+                </NavigationViewItem>
+
+                <NavigationViewItem Tag="smart_folder_modes">
+                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <Border Width="22" Height="22" Background="#008272" CornerRadius="5">
+                            <FontIcon FontSize="11" Foreground="White" Glyph="&#xE8F4;" />
+                        </Border>
+                        <TextBlock VerticalAlignment="Center" Text="Thư mục cha &amp; Lồng cụm" />
+                    </StackPanel>
+                </NavigationViewItem>
+
+                <NavigationViewItem Tag="keyword_and_extension_rules">
+                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <Border Width="22" Height="22" Background="#CA5010" CornerRadius="5">
+                            <FontIcon FontSize="11" Foreground="White" Glyph="&#xE71C;" />
+                        </Border>
+                        <TextBlock VerticalAlignment="Center" Text="Đuôi tệp &amp; Từ khóa" />
+                    </StackPanel>
+                </NavigationViewItem>
+
+                <NavigationViewItem Tag="auto_watcher">
+                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <Border Width="22" Height="22" Background="#107C10" CornerRadius="5">
+                            <FontIcon FontSize="11" Foreground="White" Glyph="&#xE7C4;" />
+                        </Border>
+                        <TextBlock VerticalAlignment="Center" Text="Tự động sắp xếp" />
+                    </StackPanel>
+                </NavigationViewItem>
+
+                <NavigationViewItem Tag="history_and_undo">
+                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                        <Border Width="22" Height="22" Background="#B4009E" CornerRadius="5">
+                            <FontIcon FontSize="11" Foreground="White" Glyph="&#xE81C;" />
+                        </Border>
+                        <TextBlock VerticalAlignment="Center" Text="Lịch sử &amp; Hoàn tác" />
+                    </StackPanel>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <!-- Vùng nội dung bên phải giống PowerToys Welcome -->
+            <ScrollViewer
+                x:Name="TopicScrollViewer"
+                Background="{ThemeResource LayerOnMicaBaseAltFillColorDefaultBrush}"
+                HorizontalScrollBarVisibility="Disabled">
+                <Grid>
+
+                    <!-- ========================================================= -->
+                    <!-- TOPIC 1: BẮT ĐẦU NHANH (GETTING STARTED)                   -->
+                    <!-- ========================================================= -->
+                    <StackPanel x:Name="TopicGettingStarted" Visibility="Collapsed">
+                        <Border Style="{StaticResource HeroOuterBorderStyle}">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#2B58A8" Offset="0.0" />
+                                    <GradientStop Color="#4773C8" Offset="0.55" />
+                                    <GradientStop Color="#6A5ACD" Offset="1.0" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+
+                            <StackPanel Spacing="14">
+                                <!-- 3 Bước trực quan -->
+                                <Grid ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Grid.Column="0" Style="{StaticResource MiniWindowCardStyle}">
+                                        <StackPanel Spacing="6">
+                                            <Grid ColumnSpacing="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Width="22" Height="22" Background="#0078D4" CornerRadius="11">
+                                                    <TextBlock Foreground="White" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Text="1" />
+                                                </Border>
+                                                <TextBlock Grid.Column="1" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Text="Chọn thư mục" TextWrapping="Wrap" />
+                                            </Grid>
+                                            <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Chọn Downloads, Desktop hoặc nhấn 'Tạo thư mục Test mẫu' để thử nghiệm an toàn." />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <FontIcon Grid.Column="1" VerticalAlignment="Center" Foreground="White" FontSize="14" Glyph="&#xE72A;" />
+
+                                    <Border Grid.Column="2" Style="{StaticResource MiniWindowCardStyle}">
+                                        <StackPanel Spacing="6">
+                                            <Grid ColumnSpacing="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Width="22" Height="22" Background="#744DA9" CornerRadius="11">
+                                                    <TextBlock Foreground="White" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Text="2" />
+                                                </Border>
+                                                <TextBlock Grid.Column="1" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Text="Xem trước bảng" TextWrapping="Wrap" />
+                                            </Grid>
+                                            <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Kiểm tra từng dòng xem tệp vào thư mục nào. Tệp không khớp sẽ được bỏ tích &amp; giữ nguyên." />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <FontIcon Grid.Column="3" VerticalAlignment="Center" Foreground="White" FontSize="14" Glyph="&#xE72A;" />
+
+                                    <Border Grid.Column="4" Style="{StaticResource MiniWindowCardStyle}">
+                                        <StackPanel Spacing="6">
+                                            <Grid ColumnSpacing="8">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <Border Width="22" Height="22" Background="#107C10" CornerRadius="11">
+                                                    <TextBlock Foreground="White" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" Text="3" />
+                                                </Border>
+                                                <TextBlock Grid.Column="1" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" Text="Dọn &amp; Hoàn tác" TextWrapping="Wrap" />
+                                            </Grid>
+                                            <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Bấm 'Sắp xếp ngay'. Nếu muốn quay lại, bấm 'Hoàn tác gần nhất' chỉ với 1 chạm." />
+                                        </StackPanel>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Sơ đồ 5 tầng ưu tiên responsive -->
+                                <Border Style="{StaticResource MiniWindowCardStyle}" Padding="14,10">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Thứ tự xét quy tắc (từ trái sang phải — gặp điều kiện nào trước sẽ áp dụng ngay):" TextWrapping="Wrap" />
+                                        <Grid ColumnSpacing="4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0" Background="#1A0078D4" CornerRadius="6" Padding="6,5">
+                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#005A9E" Text="1. Từ khóa" TextAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="→" />
+                                            <Border Grid.Column="2" Background="#1A744DA9" CornerRadius="6" Padding="6,5">
+                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#5C2D91" Text="2. Cụm tên giống" TextAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="3" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="→" />
+                                            <Border Grid.Column="4" Background="#1ACA5010" CornerRadius="6" Padding="6,5">
+                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#A43708" Text="3. Tệp dung lượng lớn" TextAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="5" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="→" />
+                                            <Border Grid.Column="6" Background="#1A107C10" CornerRadius="6" Padding="6,5">
+                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#0B5A0B" Text="4. Quy tắc Đuôi tệp" TextAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Grid.Column="7" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="→" />
+                                            <Border Grid.Column="8" Style="{StaticResource FileItemPillStyle}" Padding="6,5">
+                                                <TextBlock FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="5. Giữ nguyên / Khác" TextAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel Padding="28,22,28,28" Spacing="16">
+                            <StackPanel Spacing="6">
+                                <TextBlock FontSize="24" FontWeight="SemiBold" Text="Bắt đầu nhanh với Sofol" TextWrapping="Wrap" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap"
+                                    Text="Sofol giúp tự động phân loại các tệp rời rạc trong Downloads, Desktop hoặc bất kỳ thư mục nào thành cấu trúc thư mục gọn gàng. Bạn luôn xem trước được kết quả trước khi phần mềm di chuyển bất kỳ tệp nào." />
+                            </StackPanel>
+
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Cách sử dụng an toàn" />
+
+                            <StackPanel Spacing="10">
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource KeyBadgeStyle}" VerticalAlignment="Top">
+                                            <TextBlock FontWeight="SemiBold" FontSize="12" Text="Mẹo 1" />
+                                        </Border>
+                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap" Text="Thử lần đầu bằng nút 'Tạo thư mục Test mẫu': Sofol tạo một thư mục giả lập giống Downloads lộn xộn để bạn bấm sắp xếp và hoàn tác thoải mái." />
+                                    </Grid>
+                                </Border>
+
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource KeyBadgeStyle}" VerticalAlignment="Top">
+                                            <TextBlock FontWeight="SemiBold" FontSize="12" Text="Mẹo 2" />
+                                        </Border>
+                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap" Text="Chỉ tệp nào CÓ DẤU TÍCH mới được di chuyển. Tệp không khớp quy tắc nào sẽ hiện mờ 'Giữ nguyên tại chỗ' và không bị đụng tới." />
+                                    </Grid>
+                                </Border>
+
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Style="{StaticResource KeyBadgeStyle}" VerticalAlignment="Top">
+                                            <TextBlock FontWeight="SemiBold" FontSize="12" Text="Mẹo 3" />
+                                        </Border>
+                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="Wrap" Text="Tệp đang tải dở (.crdownload, .part), đang mở khóa bởi ứng dụng khác hoặc tệp hệ thống (desktop.ini) luôn tự động được bảo vệ." />
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,6,0,0">
+                                <Button Click="OnOpenDashboardClick" Content="Mở Dọn dẹp &amp; Xem trước" Style="{StaticResource AccentButtonStyle}" />
+                                <Button Click="OnJumpToSmartFolderModesClick" Content="Xem 3 chế độ Gom cụm tên →" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- ========================================================= -->
+                    <!-- TOPIC 2: GOM CỤM TÊN THÔNG MINH                           -->
+                    <!-- ========================================================= -->
+                    <StackPanel x:Name="TopicSmartGrouping" Visibility="Collapsed">
+                        <Border Style="{StaticResource HeroOuterBorderStyle}">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#4C2B87" Offset="0.0" />
+                                    <GradientStop Color="#6D44B8" Offset="0.55" />
+                                    <GradientStop Color="#3A6BC4" Offset="1.0" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Trước khi gom -->
+                                <Border Grid.Column="0" Style="{StaticResource MiniWindowCardStyle}">
+                                    <StackPanel Spacing="6">
+                                        <Grid ColumnSpacing="6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon FontSize="13" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE8B7;" />
+                                            <TextBlock Grid.Column="1" FontWeight="SemiBold" FontSize="12.5" Text="Trước khi gom (Downloads lộn xộn)" TextWrapping="Wrap" />
+                                        </Grid>
+                                        <Border Style="{StaticResource FileItemPillStyle}">
+                                            <TextBlock FontSize="12" Text="📄 Book_Exported.docx" TextWrapping="Wrap" />
+                                        </Border>
+                                        <Border Style="{StaticResource FileItemPillStyle}">
+                                            <TextBlock FontSize="12" Text="📄 Book_Exported (1).docx" TextWrapping="Wrap" />
+                                        </Border>
+                                        <Border Style="{StaticResource FileItemPillStyle}">
+                                            <TextBlock FontSize="12" Text="📄 Book_Exported (2).docx" TextWrapping="Wrap" />
+                                        </Border>
+                                        <Border Style="{StaticResource FileItemPillStyle}">
+                                            <TextBlock FontSize="12" Text="📕 GGKEY_01.pdf" TextWrapping="Wrap" />
+                                        </Border>
+                                        <Border Style="{StaticResource FileItemPillStyle}">
+                                            <TextBlock FontSize="12" Text="📕 GGKEY_01 (1).pdf" TextWrapping="Wrap" />
+                                        </Border>
+                                        <Border Style="{StaticResource FileItemPillStyle}">
+                                            <TextBlock FontSize="12" Text="📄 WorldFirst.docx  (chỉ có 1 tệp lẻ)" TextWrapping="Wrap" />
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Mũi tên ở giữa -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="6" HorizontalAlignment="Center">
+                                    <Border Background="#E6FFFFFF" CornerRadius="16" Padding="10,6">
+                                        <StackPanel HorizontalAlignment="Center" Spacing="2">
+                                            <FontIcon FontSize="16" Foreground="#5C2D91" Glyph="&#xE72A;" />
+                                            <TextBlock FontSize="10.5" FontWeight="SemiBold" Foreground="#5C2D91" Text="Tối thiểu ≥ 2" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Sau khi gom -->
+                                <Border Grid.Column="2" Style="{StaticResource MiniWindowCardStyle}">
+                                    <StackPanel Spacing="8">
+                                        <Grid ColumnSpacing="6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <FontIcon FontSize="13" Foreground="#744DA9" Glyph="&#xE945;" />
+                                            <TextBlock Grid.Column="1" FontWeight="SemiBold" FontSize="12.5" Text="Sau khi nhận diện cụm tên" TextWrapping="Wrap" />
+                                        </Grid>
+
+                                        <Border Background="#18744DA9" CornerRadius="6" Padding="10,8">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock FontSize="12.5" FontWeight="SemiBold" Foreground="#5C2D91" Text="📁 Book_Exported" TextWrapping="Wrap" />
+                                                <TextBlock FontSize="11.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Gom đủ 3 bản giống gốc tên (.docx)" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Background="#18744DA9" CornerRadius="6" Padding="10,8">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock FontSize="12.5" FontWeight="SemiBold" Foreground="#5C2D91" Text="📁 GGKEY_01" TextWrapping="Wrap" />
+                                                <TextBlock FontSize="11.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Gom đủ 2 bản giống gốc tên (.pdf)" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <Border Style="{StaticResource FileItemPillStyle}" Padding="10,8">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock FontSize="12" FontWeight="SemiBold" Text="📄 WorldFirst.docx (KHÔNG tạo cụm)" TextWrapping="Wrap" />
+                                                <TextBlock FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Chỉ có 1 tệp lẻ ➔ tránh đẻ thư mục rườm rà 1 tệp" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Padding="28,22,28,28" Spacing="16">
+                            <StackPanel Spacing="6">
+                                <TextBlock FontSize="24" FontWeight="SemiBold" Text="Gom cụm tên thông minh (Smart Grouping)" TextWrapping="Wrap" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap"
+                                    Text="Thay vì bắt bạn phải tự tạo quy tắc cho từng dự án, Sofol tự đọc tên tất cả tệp trong thư mục để phát hiện những tệp có chung phần gốc hoặc có tên gần giống nhau rồi tự tạo thư mục cụm." />
+                            </StackPanel>
+
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Giải thích các tùy chọn dễ nhầm" />
+
+                            <StackPanel Spacing="10">
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="1. Tạo cụm là gì?" TextWrapping="Wrap" />
+                                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Khi bạn tải lại cùng 1 tài liệu nhiều lần, Windows hay đặt thêm (1), (2), - Copy, _v1... Sofol sẽ cắt phần hậu tố đó đi để nhận ra chúng cùng thuộc gốc tên Book_Exported và gom vào một thư mục riêng." />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="2. Tại sao phải đặt 'Số tệp tối thiểu tạo thư mục cụm' (Mặc định = 2)?" TextWrapping="Wrap" />
+                                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Nếu không có mức tối thiểu từ 2 trở lên, mọi tệp đứng một mình như WorldFirst.docx cũng bị tạo thành 1 thư mục riêng chỉ để chứa đúng 1 tệp (Downloads\WorldFirst\WorldFirst.docx). Đặt bằng 2 nghĩa là: phải có ít nhất 2 tệp giống tên nhau mới tạo thư mục; nếu muốn khắt khe hơn (chỉ gom nhóm lớn) bạn tăng lên 3 hoặc 4." />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="3. Ngưỡng độ tương đồng tên (%) (Mặc định = 80%)" TextWrapping="Wrap" />
+                                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Áp dụng cho những tệp không có đuôi (1), (2) mà tên chỉ giống nhau một phần (ví dụ: BaoCao_Thang10.xlsx và BaoCao_Thang11.xlsx). Tỷ lệ % càng cao thì 2 tên phải giống nhau càng sát mới được gom chung." />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,6,0,0">
+                                <Button Click="OnOpenRulesClick" Content="Mở Thiết lập Quy tắc" Style="{StaticResource AccentButtonStyle}" />
+                                <Button Click="OnJumpToSmartFolderModesClick" Content="Xem tiếp: Thư mục cha &amp; Lồng quy tắc →" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- ========================================================= -->
+                    <!-- TOPIC 3: THƯ MỤC CHA CHUNG & LỒNG CỤM (INTERACTIVE!)     -->
+                    <!-- ========================================================= -->
+                    <StackPanel x:Name="TopicSmartFolderModes" Visibility="Collapsed">
+                        <Border Style="{StaticResource HeroOuterBorderStyle}">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#0D5C63" Offset="0.0" />
+                                    <GradientStop Color="#16837D" Offset="0.55" />
+                                    <GradientStop Color="#1E6091" Offset="1.0" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+
+                            <StackPanel Spacing="12">
+                                <!-- Thanh công tắc mô phỏng tương tác trực tiếp -->
+                                <Border Style="{StaticResource MiniWindowCardStyle}" Padding="14,10">
+                                    <Grid ColumnSpacing="14">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid Grid.Column="0" ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <ToggleSwitch
+                                                x:Name="SimParentFolderSwitch"
+                                                IsOn="True"
+                                                MinWidth="0"
+                                                OffContent=""
+                                                OnContent=""
+                                                Toggled="OnSimulatorToggleChanged" />
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock FontSize="12.5" FontWeight="SemiBold" Text="Đặt cụm vào thư mục cha chung" TextWrapping="Wrap" />
+                                                <TextBlock FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Thư mục cha mặc định: Gom theo tên" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Grid>
+
+                                        <Grid Grid.Column="1" ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <ToggleSwitch
+                                                x:Name="SimNestInsideRuleSwitch"
+                                                IsOn="False"
+                                                MinWidth="0"
+                                                OffContent=""
+                                                OnContent=""
+                                                Toggled="OnSimulatorToggleChanged" />
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock FontSize="12.5" FontWeight="SemiBold" Text="Lồng cụm tên vào thư mục quy tắc" TextWrapping="Wrap" />
+                                                <TextBlock FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Cho cụm chui vào Tài liệu / Book test" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Mô phỏng đường dẫn cây thư mục cập nhật tức thì -->
+                                <Border Style="{StaticResource MiniWindowCardStyle}" Padding="14">
+                                    <StackPanel Spacing="10">
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Grid ColumnSpacing="8" VerticalAlignment="Center">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <FontIcon FontSize="14" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" Glyph="&#xE8F4;" />
+                                                <TextBlock Grid.Column="1" FontWeight="SemiBold" FontSize="12.5" Text="Kết quả cấu trúc thư mục trong Downloads (Bấm 2 công tắc trên để xem)" TextWrapping="Wrap" />
+                                            </Grid>
+                                            <Border Grid.Column="1" Background="#1A008272" CornerRadius="6" Padding="8,4" VerticalAlignment="Center">
+                                                <TextBlock x:Name="SimModeBadgeText" FontSize="11" FontWeight="SemiBold" Foreground="#006B5E" Text="Chế độ: Thư mục cha chung" TextWrapping="Wrap" />
+                                            </Border>
+                                        </Grid>
+
+                                        <Grid ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Ví dụ A: Khớp quy tắc Từ khóa -->
+                                            <Border Grid.Column="0" Style="{StaticResource FileItemPillStyle}" Padding="10">
+                                                <StackPanel Spacing="4">
+                                                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#0067C0" Text="1. Cụm khớp quy tắc Từ khóa" TextWrapping="Wrap" />
+                                                    <TextBlock FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Book_Exported (1..2).docx&#x0a;(Quy tắc Book ➔ Book test)" TextWrapping="Wrap" />
+                                                    <Border Background="{ThemeResource SolidBackgroundFillColorBaseBrush}" CornerRadius="5" Padding="8,6" Margin="0,4,0,0">
+                                                        <TextBlock x:Name="SimPathKeywordText" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap" Text="Downloads\&#x0a;└─ Book test\&#x0a;   └─ (3 tệp đặt trực tiếp)" />
+                                                    </Border>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Ví dụ B: Khớp quy tắc Đuôi tệp -->
+                                            <Border Grid.Column="1" Style="{StaticResource FileItemPillStyle}" Padding="10">
+                                                <StackPanel Spacing="4">
+                                                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#0B6A0B" Text="2. Cụm khớp quy tắc Đuôi tệp" TextWrapping="Wrap" />
+                                                    <TextBlock FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="GGKEY_01.pdf, GGKEY_01 (1).pdf&#x0a;(Quy tắc Tài liệu .pdf ➔ Tài liệu)" TextWrapping="Wrap" />
+                                                    <Border Background="{ThemeResource SolidBackgroundFillColorBaseBrush}" CornerRadius="5" Padding="8,6" Margin="0,4,0,0">
+                                                        <TextBlock x:Name="SimPathExtensionText" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap" Text="Downloads\&#x0a;└─ Gom theo tên\&#x0a;   └─ GGKEY_01\ (2 tệp)" />
+                                                    </Border>
+                                                </StackPanel>
+                                            </Border>
+
+                                            <!-- Ví dụ C: Không khớp quy tắc nào -->
+                                            <Border Grid.Column="2" Style="{StaticResource FileItemPillStyle}" Padding="10">
+                                                <StackPanel Spacing="4">
+                                                    <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="#744DA9" Text="3. Cụm không khớp quy tắc nào" TextWrapping="Wrap" />
+                                                    <TextBlock FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Project_v1.psd, Project_v2.psd&#x0a;(Chưa có quy tắc cho đuôi .psd)" TextWrapping="Wrap" />
+                                                    <Border Background="{ThemeResource SolidBackgroundFillColorBaseBrush}" CornerRadius="5" Padding="8,6" Margin="0,4,0,0">
+                                                        <TextBlock x:Name="SimPathUnmatchedText" FontFamily="Consolas" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap" Text="Downloads\&#x0a;└─ Gom theo tên\&#x0a;   └─ Project\ (2 tệp)" />
+                                                    </Border>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel Padding="28,22,28,28" Spacing="16">
+                            <StackPanel Spacing="6">
+                                <TextBlock FontSize="24" FontWeight="SemiBold" Text="Thư mục cha chung &amp; Lồng cụm vào quy tắc" TextWrapping="Wrap" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap"
+                                    Text="Hai tùy chọn này không gom lẫn mọi kiểu file rồi tách lại ở bên trong, mà chỉ quyết định VỊ TRÍ ĐẶT các thư mục cụm tên giống nhau." />
+                            </StackPanel>
+
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Hiểu nhanh từng trường hợp" />
+
+                            <StackPanel Spacing="10">
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="A. Khi nào 'Đặt các cụm tên vào thư mục cha chung' (Gom theo tên) có tác dụng?" TextWrapping="Wrap" />
+                                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Khi bạn có nhiều cụm tên nhưng KHÔNG muốn mỗi cụm tạo 1 thư mục nằm rải ngoài Downloads. Bật mục này để gom toàn bộ các cụm đó vào chung 1 ngăn (ví dụ Downloads\Gom theo tên\GGKEY_01). Ngăn này chứa thẳng các cụm tên chứ không chia tiếp theo đuôi file." />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="B. Khi nào 'Lồng cụm tên vào thư mục của quy tắc' có tác dụng?" TextWrapping="Wrap" />
+                                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Áp dụng khi các tệp trong cụm đã khớp 1 quy tắc đang bật (ví dụ .pdf ➔ Tài liệu, hoặc Book_ ➔ Book test). Thay vì đặt ở Gom theo tên, Sofol sẽ đặt cụm tên nằm gọn bên trong thư mục quy tắc đó: Tài liệu\GGKEY_01 hoặc Book test\Book_Exported." />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="C. Gợi ý cấu hình gọn gàng nhất cho người mới" TextWrapping="Wrap" />
+                                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Bật cả 2 công tắc! Khi đó cụm nào có quy tắc rồi thì chui gọn vào đúng loại (Tài liệu\..., Hình ảnh\..., Book test\...); còn cụm nào lạ chưa có quy tắc đuôi tệp sẽ tự xếp gọn vào Gom theo tên\... mà không làm bừa Downloads." />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,6,0,0">
+                                <Button Click="OnOpenRulesClick" Content="Mở Thiết lập Quy tắc để áp dụng" Style="{StaticResource AccentButtonStyle}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- ========================================================= -->
+                    <!-- TOPIC 4: QUY TẮC ĐUÔI TỆP & TỪ KHÓA                       -->
+                    <!-- ========================================================= -->
+                    <StackPanel x:Name="TopicRulesPriority" Visibility="Collapsed">
+                        <Border Style="{StaticResource HeroOuterBorderStyle}">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#9A3B12" Offset="0.0" />
+                                    <GradientStop Color="#C9591A" Offset="0.55" />
+                                    <GradientStop Color="#D6871A" Offset="1.0" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Style="{StaticResource MiniWindowCardStyle}">
+                                    <StackPanel Spacing="8">
+                                        <Border Background="#1ACA5010" CornerRadius="6" Padding="8,4" HorizontalAlignment="Left">
+                                            <TextBlock FontSize="11.5" FontWeight="SemiBold" Foreground="#9A3B12" Text="Quy tắc chỉ có Đuôi tệp (Tài liệu — #20)" TextWrapping="Wrap" />
+                                        </Border>
+                                        <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Đuôi: .docx, .pdf  |  Từ khóa: (Trống)" TextWrapping="Wrap" />
+                                        <Border Style="{StaticResource FileItemPillStyle}">
+                                            <TextBlock FontSize="12" Text="✅ HopDong.pdf  ➔  📁 Tài liệu" TextWrapping="Wrap" />
+                                        </Border>
+                                        <Border Style="{StaticResource FileItemPillStyle}">
+                                            <TextBlock FontSize="12" Text="✅ WorldFirst.docx  ➔  📁 Tài liệu" TextWrapping="Wrap" />
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="1" Style="{StaticResource MiniWindowCardStyle}">
+                                    <StackPanel Spacing="8">
+                                        <Border Background="#1A0078D4" CornerRadius="6" Padding="8,4" HorizontalAlignment="Left">
+                                            <TextBlock FontSize="11.5" FontWeight="SemiBold" Foreground="#005A9E" Text="Quy tắc kết hợp Đuôi + Từ khóa (Book — #15)" TextWrapping="Wrap" />
+                                        </Border>
+                                        <TextBlock FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Đuôi: .docx  +  Từ khóa: Book_  (Điều kiện VÀ)" TextWrapping="Wrap" />
+                                        <Border Style="{StaticResource FileItemPillStyle}">
+                                            <TextBlock FontSize="12" Text="✅ Book_Exported.docx  ➔  📁 Book test" TextWrapping="Wrap" />
+                                        </Border>
+                                        <Border Style="{StaticResource FileItemPillStyle}">
+                                            <TextBlock FontSize="12" Text="❌ WorldFirst.docx  ➔  Không chứa 'Book_' (bỏ qua)" TextWrapping="Wrap" />
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Padding="28,22,28,28" Spacing="16">
+                            <StackPanel Spacing="6">
+                                <TextBlock FontSize="24" FontWeight="SemiBold" Text="Quy tắc Đuôi tệp &amp; Từ khóa" TextWrapping="Wrap" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap"
+                                    Text="Bạn có toàn quyền tạo, sửa, bật/tắt hoặc sắp xếp độ ưu tiên cho từng loại tệp vào thư mục theo ý muốn." />
+                            </StackPanel>
+
+                            <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Lưu ý quan trọng khi tạo quy tắc" />
+
+                            <StackPanel Spacing="10">
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="Kết hợp Đuôi tệp + Từ khóa là điều kiện VÀ (AND)" TextWrapping="Wrap" />
+                                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Nếu bạn nhập cả đuôi (.docx) và từ khóa (Book_), tệp phải thỏa mãn đồng thời cả 2 mới đi vào quy tắc này. Nếu chỉ muốn lọc theo đuôi tệp, hãy xóa trống ô Từ khóa." />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="Số ưu tiên càng nhỏ, kiểm tra càng sớm" TextWrapping="Wrap" />
+                                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Quy tắc riêng như Book (#15) nên có số nhỏ hơn quy tắc chung như Tài liệu (#20) để những tệp Book_Exported.docx được tách vào Book test trước khi phần còn lại vào Tài liệu." />
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="Nút 'Bật tất cả' / 'Tắt tất cả' khi muốn dọn từng nhóm" TextWrapping="Wrap" />
+                                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Khi muốn chỉ dọn đúng một nhóm tệp (ví dụ chỉ dọn Book), nhấn 'Tắt tất cả' rồi bật đúng quy tắc Book. Mọi tệp khác trong Downloads sẽ tự động bỏ tích và giữ nguyên." />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,6,0,0">
+                                <Button Click="OnOpenRulesClick" Content="Mở Thiết lập Quy tắc" Style="{StaticResource AccentButtonStyle}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- ========================================================= -->
+                    <!-- TOPIC 5: TỰ ĐỘNG SẮP XẾP (WATCHER)                        -->
+                    <!-- ========================================================= -->
+                    <StackPanel x:Name="TopicAutoWatcher" Visibility="Collapsed">
+                        <Border Style="{StaticResource HeroOuterBorderStyle}">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#0E5A24" Offset="0.0" />
+                                    <GradientStop Color="#167C3A" Offset="0.55" />
+                                    <GradientStop Color="#0D7E8A" Offset="1.0" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Style="{StaticResource MiniWindowCardStyle}">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock FontWeight="SemiBold" FontSize="12.5" Text="🌐 Đang tải từ web" TextWrapping="Wrap" />
+                                        <Border Background="#1AD13438" CornerRadius="5" Padding="8,5">
+                                            <TextBlock FontSize="11.5" Foreground="#A4262C" Text="🔒 report.pdf.crdownload" TextWrapping="Wrap" />
+                                        </Border>
+                                        <TextBlock FontSize="11.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Sofol nhận biết tệp tải dở và tạm giữ nguyên an toàn." />
+                                    </StackPanel>
+                                </Border>
+
+                                <FontIcon Grid.Column="1" VerticalAlignment="Center" Foreground="White" FontSize="14" Glyph="&#xE72A;" />
+
+                                <Border Grid.Column="2" Style="{StaticResource MiniWindowCardStyle}">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock FontWeight="SemiBold" FontSize="12.5" Text="⏱ Chờ tệp ổn định" TextWrapping="Wrap" />
+                                        <Border Background="#1ACA5010" CornerRadius="5" Padding="8,5">
+                                            <TextBlock FontSize="11.5" Foreground="#9A3B12" Text="Kiểm tra khóa tệp (2 giây)" TextWrapping="Wrap" />
+                                        </Border>
+                                        <TextBlock FontSize="11.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Đảm bảo trình duyệt hay app khác đã ghi xong dữ liệu." />
+                                    </StackPanel>
+                                </Border>
+
+                                <FontIcon Grid.Column="3" VerticalAlignment="Center" Foreground="White" FontSize="14" Glyph="&#xE72A;" />
+
+                                <Border Grid.Column="4" Style="{StaticResource MiniWindowCardStyle}">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock FontWeight="SemiBold" FontSize="12.5" Text="✅ Tự động dọn ngay" TextWrapping="Wrap" />
+                                        <Border Background="#1A107C10" CornerRadius="5" Padding="8,5">
+                                            <TextBlock FontSize="11.5" Foreground="#0B5A0B" Text="📁 Tài liệu\report.pdf" TextWrapping="Wrap" />
+                                        </Border>
+                                        <TextBlock FontSize="11.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Di chuyển tự động &amp; lưu lịch sử để có thể hoàn tác." />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Padding="28,22,28,28" Spacing="16">
+                            <StackPanel Spacing="6">
+                                <TextBlock FontSize="24" FontWeight="SemiBold" Text="Tự động sắp xếp thư mục theo thời gian thực" TextWrapping="Wrap" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap"
+                                    Text="Khi bật chế độ Tự động sắp xếp, mọi tệp mới tải về hoặc mới chép vào thư mục đang chọn sẽ tự động được phân loại theo bộ quy tắc của bạn mà không cần mở ứng dụng bấm tay." />
+                            </StackPanel>
+
+                            <StackPanel Spacing="10">
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="Không bao giờ cắt ngang tệp đang tải hay đang mở" TextWrapping="Wrap" />
+                                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Dịch vụ bỏ qua các đuôi tạm (.crdownload, .part, .tmp) và thử kiểm tra quyền mở tệp độc quyền trước khi di chuyển." />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,6,0,0">
+                                <Button Click="OnOpenWatcherClick" Content="Mở Tự động sắp xếp" Style="{StaticResource AccentButtonStyle}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- ========================================================= -->
+                    <!-- TOPIC 6: LỊCH SỬ & HOÀN TÁC                               -->
+                    <!-- ========================================================= -->
+                    <StackPanel x:Name="TopicHistoryUndo" Visibility="Collapsed">
+                        <Border Style="{StaticResource HeroOuterBorderStyle}">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#7A1365" Offset="0.0" />
+                                    <GradientStop Color="#A81F88" Offset="0.55" />
+                                    <GradientStop Color="#5B3DB8" Offset="1.0" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+
+                            <Grid ColumnSpacing="12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Style="{StaticResource MiniWindowCardStyle}">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock FontWeight="SemiBold" FontSize="12.5" Text="📋 Phiên dọn dẹp đã lưu" TextWrapping="Wrap" />
+                                        <Border Style="{StaticResource FileItemPillStyle}">
+                                            <TextBlock FontSize="11.5" Text="Book_Exported.docx  ➔  Book test\..." TextWrapping="Wrap" />
+                                        </Border>
+                                        <Border Style="{StaticResource FileItemPillStyle}">
+                                            <TextBlock FontSize="11.5" Text="GGKEY_01.pdf  ➔  Tài liệu\GGKEY_01\..." TextWrapping="Wrap" />
+                                        </Border>
+                                        <TextBlock FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" Text="Ghi nhận đầy đủ đường dẫn gốc &amp; đích của từng tệp." TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <Border Background="#E6FFFFFF" CornerRadius="16" Padding="10,6">
+                                        <StackPanel HorizontalAlignment="Center" Spacing="2">
+                                            <FontIcon FontSize="15" Foreground="#881798" Glyph="&#xE7A7;" />
+                                            <TextBlock FontSize="10.5" FontWeight="SemiBold" Foreground="#881798" Text="Hoàn tác" />
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+
+                                <Border Grid.Column="2" Style="{StaticResource MiniWindowCardStyle}">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock FontWeight="SemiBold" FontSize="12.5" Text="✅ Khôi phục nguyên vẹn" TextWrapping="Wrap" />
+                                        <Border Background="#1A107C10" CornerRadius="5" Padding="8,6">
+                                            <TextBlock FontSize="11.5" Foreground="#0B5A0B" Text="Trả lại toàn bộ tệp về đúng thư mục ban đầu" TextWrapping="Wrap" />
+                                        </Border>
+                                        <Border Style="{StaticResource FileItemPillStyle}">
+                                            <TextBlock FontSize="11.5" Text="🗑 Tự xóa các thư mục trống mới tạo" TextWrapping="Wrap" />
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <StackPanel Padding="28,22,28,28" Spacing="16">
+                            <StackPanel Spacing="6">
+                                <TextBlock FontSize="24" FontWeight="SemiBold" Text="Lịch sử di chuyển &amp; Hoàn tác 1 chạm" TextWrapping="Wrap" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    TextWrapping="Wrap"
+                                    Text="Mọi phiên sắp xếp đều có nhật ký chi tiết và nút Hoàn tác để đưa thư mục về đúng hiện trạng ban đầu nếu bạn đổi ý." />
+                            </StackPanel>
+
+                            <StackPanel Spacing="10">
+                                <Border Style="{StaticResource HowToCardStyle}">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="Không bao giờ ghi đè mất tệp trùng tên" TextWrapping="Wrap" />
+                                        <TextBlock Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Text="Nếu thư mục đích đã có tệp trùng tên, Sofol tự thêm hậu tố an toàn như TenTep (1).ext (có thể chỉnh trong Cài đặt) để đảm bảo không bao giờ ghi đè mất dữ liệu cũ." />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,6,0,0">
+                                <Button Click="OnOpenHistoryClick" Content="Mở Lịch sử &amp; Hoàn tác" Style="{StaticResource AccentButtonStyle}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+
+                </Grid>
+            </ScrollViewer>
+        </NavigationView>
+    </Grid>
+</Window>

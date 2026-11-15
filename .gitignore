@@ -1,0 +1,30 @@
+## Visual Studio & .NET Build Artifacts
+**/bin/
+**/obj/
+**/dist/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Visual Studio Code
+.vscode/
+
+## Test Results
+TestResults/
+*.trx
+*.coverage
+
+## Windows & Environment
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+## Antigravity Scratch & Local Logs
+.gemini/
