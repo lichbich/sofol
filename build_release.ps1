@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $scriptDir
 
-$version = "1.1.0"
+$version = "1.1.1"
 $distDir = Join-Path $scriptDir "dist"
 $packageDir = Join-Path $distDir "Sofol-v$version-win-x64"
 $zipPath = Join-Path $distDir "Sofol-v$version-win-x64.zip"

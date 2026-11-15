@@ -20,7 +20,7 @@
                 TextWrapping="Wrap" />
             <TextBlock
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Text="Theo dõi thư mục theo thời gian thực và tự động phân loại ngay sau khoảng thời gian trễ an toàn."
+                Text="Theo dõi thư mục và tự động phân loại tệp sau khoảng thời gian đã chọn."
                 TextWrapping="Wrap" />
         </StackPanel>
 
@@ -105,7 +105,7 @@
                         <Button
                             AutomationProperties.Name="Dọn ngay"
                             Command="{x:Bind ViewModel.RunWatcherNowCommand}"
-                            ToolTipService.ToolTip="Quét và dọn ngay các tệp hiện có mà không cần đợi hết độ trễ">
+                            ToolTipService.ToolTip="Quét và dọn ngay các tệp hiện có mà không cần đợi hết thời gian hẹn">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <FontIcon FontSize="14" Glyph="&#xE945;" />
                                 <TextBlock Text="Dọn ngay" />
@@ -147,7 +147,7 @@
             </StackPanel>
         </Border>
 
-        <!-- Cấu hình độ trễ an toàn linh hoạt theo đơn vị thời gian -->
+        <!-- Cấu hình thời gian tự động dọn linh hoạt theo đơn vị thời gian -->
         <Border Grid.Row="3" Style="{StaticResource FluentCardStyle}" Padding="16,14">
             <Grid ColumnSpacing="14">
                 <Grid.ColumnDefinitions>
@@ -168,7 +168,7 @@
                 <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
                     <TextBlock
                         Style="{StaticResource BodyStrongTextBlockStyle}"
-                        Text="Độ trễ an toàn trước khi tự động dọn"
+                        Text="Thời gian tự động dọn"
                         TextWrapping="Wrap" />
                     <TextBlock
                         FontSize="12.5"

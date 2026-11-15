@@ -87,7 +87,7 @@ public sealed class FolderWatcherService : IDisposable
             _debounceTimer = new Timer(OnTimerTick, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
         }
 
-        EmitLog($"Đã bắt đầu tự động sắp xếp thư mục: {folderPath} (độ trễ an toàn: {delayDisplay}).");
+        EmitLog($"Đã bắt đầu tự động sắp xếp thư mục: {folderPath} (thời gian tự động dọn: {delayDisplay}).");
         StateChanged?.Invoke(true, folderPath);
 
         int existingCount = ScanDirectoryForNewCandidates(folderPath, isInitialScan: true);

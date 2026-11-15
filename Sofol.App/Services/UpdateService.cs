@@ -44,18 +44,13 @@ public static class UpdateService
 
     public static async Task<AppUpdateInfo> CheckForUpdateAsync(string repository)
     {
-        if (string.IsNullOrWhiteSpace(repository) || !repository.Contains('/'))
-        {
-            return new AppUpdateInfo
-            {
-                HasUpdate = false,
-                ErrorMessage = "Đường dẫn GitHub Repository không hợp lệ (cần định dạng: username/repo-name)."
-            };
-        }
+        string targetRepo = string.IsNullOrWhiteSpace(repository) || !repository.Contains('/')
+            ? "lichbich/sofol"
+            : repository.Trim();
 
         try
         {
-            string url = $"https://api.github.com/repos/{repository.Trim()}/releases/latest";
+            string url = $"https://api.github.com/repos/{targetRepo}/releases/latest";
             using var response = await _httpClient.GetAsync(url);
 
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
@@ -63,7 +58,7 @@ public static class UpdateService
                 return new AppUpdateInfo
                 {
                     HasUpdate = false,
-                    ErrorMessage = "Không tìm thấy bản phát hành (Release) nào trên repository này."
+                    ErrorMessage = string.Empty
                 };
             }
 
@@ -124,12 +119,12 @@ public static class UpdateService
                 PublishedAt = publishedAt
             };
         }
-        catch (Exception ex)
+        catch
         {
             return new AppUpdateInfo
             {
                 HasUpdate = false,
-                ErrorMessage = $"Lỗi khi kiểm tra bản cập nhật: {ex.Message}"
+                ErrorMessage = "Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng của bạn."
             };
         }
     }

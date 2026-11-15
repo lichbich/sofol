@@ -72,6 +72,12 @@ public sealed class ConfigAndHistoryStore
                         }
                     }
 
+                    if (string.IsNullOrWhiteSpace(loaded.GitHubRepository) ||
+                        loaded.GitHubRepository.Equals("trong/Sofol", StringComparison.OrdinalIgnoreCase))
+                    {
+                        loaded.GitHubRepository = "lichbich/sofol";
+                    }
+
                     if (loaded.ConfigSchemaVersion < AppConfiguration.CurrentConfigSchemaVersion)
                     {
                         loaded.ConfigSchemaVersion = AppConfiguration.CurrentConfigSchemaVersion;

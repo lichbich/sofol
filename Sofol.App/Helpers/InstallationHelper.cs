@@ -15,7 +15,7 @@ public static class InstallationHelper
     public const string AppName = "Sofol";
     public const string AppDisplayName = "Sofol";
     public const string AppPublisher = "Sofol";
-    public const string AppVersion = "1.1.0";
+    public const string AppVersion = "1.1.1";
 
     [ComImport]
     [Guid("00021401-0000-0000-C000-000000000046")]

@@ -35,43 +35,43 @@ public sealed class FileOrganizerTests : IDisposable
         Assert.Equal(PlanItemStatus.LockedOrDownloading, crDownload!.Status);
         Assert.False(crDownload.IsSelected);
 
-        // Kiểm tra cụm Book_Exported
-        var bookItems = analysis.Items
-            .Where(i => i.FileName.StartsWith("Book_Exported", StringComparison.OrdinalIgnoreCase))
+        // Kiểm tra cụm Bao_cao_doanh_thu
+        var reportItems = analysis.Items
+            .Where(i => i.FileName.StartsWith("Bao_cao_doanh_thu", StringComparison.OrdinalIgnoreCase))
             .ToList();
-        Assert.Equal(3, bookItems.Count);
-        Assert.All(bookItems, item =>
+        Assert.Equal(3, reportItems.Count);
+        Assert.All(reportItems, item =>
         {
             Assert.Equal(RuleBadgeType.SmartNameGroup, item.RuleBadgeType);
-            Assert.Equal(Path.Combine("Gom theo tên", "Book_Exported"), item.ProposedTargetFolder);
+            Assert.Equal(Path.Combine("Gom theo tên", "Bao_cao_doanh_thu"), item.ProposedTargetFolder);
         });
 
-        // Kiểm tra cặp file tiếng Hàn khác đuôi (.docx và .hwp)
-        var koreanPair = analysis.Items
-            .Where(i => i.FileName.Contains("참관일지", StringComparison.OrdinalIgnoreCase))
+        // Kiểm tra cụm Hop_dong_dich_vu_2026 (.pdf và .docx)
+        var contractGroup = analysis.Items
+            .Where(i => i.FileName.StartsWith("Hop_dong_dich_vu_2026", StringComparison.OrdinalIgnoreCase))
             .ToList();
-        Assert.Equal(2, koreanPair.Count);
-        Assert.All(koreanPair, item => Assert.Equal(RuleBadgeType.SmartNameGroup, item.RuleBadgeType));
-        Assert.Equal(koreanPair[0].ProposedTargetFolder, koreanPair[1].ProposedTargetFolder);
+        Assert.Equal(3, contractGroup.Count);
+        Assert.All(contractGroup, item => Assert.Equal(RuleBadgeType.SmartNameGroup, item.RuleBadgeType));
+        Assert.Equal(contractGroup[0].ProposedTargetFolder, contractGroup[1].ProposedTargetFolder);
 
-        // Kiểm tra cụm tên tương đồng (Hoa_don_thang_09_2026 & Hoa_don_thang_10_2026)
+        // Kiểm tra cụm tên tương đồng (Hoa_don_tien_dien_thang_09 & Hoa_don_tien_dien_thang_10)
         var invoicePair = analysis.Items
-            .Where(i => i.FileName.StartsWith("Hoa_don_thang_", StringComparison.OrdinalIgnoreCase))
+            .Where(i => i.FileName.StartsWith("Hoa_don_tien_dien_thang_", StringComparison.OrdinalIgnoreCase))
             .ToList();
         Assert.Equal(2, invoicePair.Count);
         Assert.All(invoicePair, item => Assert.Equal(RuleBadgeType.SmartNameGroup, item.RuleBadgeType));
 
-        // Kiểm tra phân loại các định dạng phổ biến từ ảnh Downloads
-        Assert.Equal("Hình ảnh", GetItem(analysis, "unnamed.png").ProposedTargetFolder);
-        Assert.Equal("Hình ảnh", GetItem(analysis, "Picture of file_kYoitdrlle28D.webp").ProposedTargetFolder);
-        Assert.Equal("Hình ảnh", GetItem(analysis, "d087849d34bf5b988afcf57c1fc3e3f3205a74fd_full.jpg").ProposedTargetFolder);
-        Assert.Equal("Bộ cài & Ứng dụng", GetItem(analysis, "CPIDNGSocks_v1.0.4.apk").ProposedTargetFolder);
-        Assert.Equal("Bộ cài & Ứng dụng", GetItem(analysis, "OBS-Studio-32.1.2-Windows-x64-Installer.exe").ProposedTargetFolder);
-        Assert.Equal("Tệp nén", GetItem(analysis, "MonaServer_Win64.zip").ProposedTargetFolder);
-        Assert.Equal("Dữ liệu & Mã nguồn", GetItem(analysis, "docugen-676bf-default-rtdb-gmm-task-export.json").ProposedTargetFolder);
-        Assert.Equal("Video", GetItem(analysis, "Recording 2026-05-11 131107.mp4").ProposedTargetFolder);
-        Assert.Equal("Bảng tính & Trình chiếu", GetItem(analysis, "Lịch trình du lịch Hoa Binh.xlsx").ProposedTargetFolder);
-        Assert.Equal("Tài liệu", GetItem(analysis, "WorldFirst.docx").ProposedTargetFolder);
+        // Kiểm tra phân loại các định dạng phổ biến
+        Assert.Equal("Hình ảnh", GetItem(analysis, "Screenshot_2026_11_15.png").ProposedTargetFolder);
+        Assert.Equal("Hình ảnh", GetItem(analysis, "Avatar_mau_thiet_ke.webp").ProposedTargetFolder);
+        Assert.Equal("Hình ảnh", GetItem(analysis, "Hinh_nen_thien_nhien_4k.jpg").ProposedTargetFolder);
+        Assert.Equal("Bộ cài & Ứng dụng", GetItem(analysis, "Setup_PhanMemTienIch_v2.0.exe").ProposedTargetFolder);
+        Assert.Equal("Tệp nén", GetItem(analysis, "Du_lieu_sao_luu_he_thong.zip").ProposedTargetFolder);
+        Assert.Equal("Dữ liệu & Mã nguồn", GetItem(analysis, "Cau_hinh_ung_dung_mau.json").ProposedTargetFolder);
+        Assert.Equal("Video", GetItem(analysis, "Video_huong_dan_cai_dat.mp4").ProposedTargetFolder);
+        Assert.Equal("Âm thanh", GetItem(analysis, "Nhac_khong_loi_thu_gian.mp3").ProposedTargetFolder);
+        Assert.Equal("Bảng tính & Trình chiếu", GetItem(analysis, "Danh_sach_nhan_su_mau.xlsx").ProposedTargetFolder);
+        Assert.Equal("Tài liệu", GetItem(analysis, "Ke_hoach_cong_tac_nam_2026.docx").ProposedTargetFolder);
     }
 
     [Fact]
@@ -91,13 +91,13 @@ public sealed class FileOrganizerTests : IDisposable
         Assert.Equal(0, exec.FailedCount);
 
         // File đang tải dở vẫn phải nằm ở gốc
-        Assert.True(File.Exists(Path.Combine(sandbox, "Windows11_Update_Package.zip.crdownload")));
+        Assert.True(File.Exists(Path.Combine(sandbox, "Goi_du_lieu_lon_dang_tai.zip.crdownload")));
         // Thư mục con có sẵn không bị ảnh hưởng
-        Assert.True(Directory.Exists(Path.Combine(sandbox, "wallpaper")));
-        Assert.True(Directory.Exists(Path.Combine(sandbox, "New folder")));
+        Assert.True(Directory.Exists(Path.Combine(sandbox, "Thu_muc_cu")));
+        Assert.True(Directory.Exists(Path.Combine(sandbox, "Du_an_mau")));
         // File đã được dời vào đúng thư mục đích
-        Assert.True(File.Exists(Path.Combine(sandbox, "Gom theo tên", "Book_Exported", "Book_Exported (1).docx")));
-        Assert.True(File.Exists(Path.Combine(sandbox, "Tệp nén", "MonaServer_Win64.zip")));
+        Assert.True(File.Exists(Path.Combine(sandbox, "Gom theo tên", "Bao_cao_doanh_thu", "Bao_cao_doanh_thu (1).xlsx")));
+        Assert.True(File.Exists(Path.Combine(sandbox, "Tệp nén", "Du_lieu_sao_luu_he_thong.zip")));
 
         // Thực hiện Hoàn tác
         UndoResult undo = await _engine.UndoSessionAsync(exec.Session!);
@@ -107,14 +107,14 @@ public sealed class FileOrganizerTests : IDisposable
         Assert.True(exec.Session!.IsUndone);
 
         // File đã quay lại gốc
-        Assert.True(File.Exists(Path.Combine(sandbox, "Book_Exported (1).docx")));
-        Assert.True(File.Exists(Path.Combine(sandbox, "MonaServer_Win64.zip")));
+        Assert.True(File.Exists(Path.Combine(sandbox, "Bao_cao_doanh_thu (1).xlsx")));
+        Assert.True(File.Exists(Path.Combine(sandbox, "Du_lieu_sao_luu_he_thong.zip")));
         // Thư mục rỗng mới tạo đã được dọn sạch
         Assert.False(Directory.Exists(Path.Combine(sandbox, "Tệp nén")));
         Assert.False(Directory.Exists(Path.Combine(sandbox, "Gom theo tên")));
         // Thư mục có sẵn vẫn còn nguyên
-        Assert.True(Directory.Exists(Path.Combine(sandbox, "wallpaper")));
-        Assert.True(Directory.Exists(Path.Combine(sandbox, "New folder")));
+        Assert.True(Directory.Exists(Path.Combine(sandbox, "Thu_muc_cu")));
+        Assert.True(Directory.Exists(Path.Combine(sandbox, "Du_an_mau")));
     }
 
     [Fact]

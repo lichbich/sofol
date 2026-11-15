@@ -26,43 +26,46 @@ public static class DemoSandboxGenerator
         Directory.CreateDirectory(folderPath);
 
         // Thư mục con có sẵn (sẽ được giữ nguyên)
-        Directory.CreateDirectory(Path.Combine(folderPath, "wallpaper"));
-        Directory.CreateDirectory(Path.Combine(folderPath, "New folder"));
+        Directory.CreateDirectory(Path.Combine(folderPath, "Thu_muc_cu"));
+        Directory.CreateDirectory(Path.Combine(folderPath, "Du_an_mau"));
 
-        // Hình ảnh
-        CreateDummyFile(folderPath, "Phòng ngủ tối giản ấm cúng với góc làm việc.png", 2400);
-        CreateDummyFile(folderPath, "d087849d34bf5b988afcf57c1fc3e3f3205a74fd_full.jpg", 1800);
-        CreateDummyFile(folderPath, "Picture of file_kYoitdrlle28D.webp", 920);
-        CreateDummyFile(folderPath, "cinema-vector-illustration-png_242108.jpg", 1450);
-        CreateDummyFile(folderPath, "unnamed.png", 640);
+        // Hình ảnh mẫu
+        CreateDummyFile(folderPath, "Hinh_nen_thien_nhien_4k.jpg", 2400);
+        CreateDummyFile(folderPath, "Anh_chup_ky_niem_gia_dinh.jpg", 1800);
+        CreateDummyFile(folderPath, "Avatar_mau_thiet_ke.webp", 920);
+        CreateDummyFile(folderPath, "Banner_quang_cao_su_kien.png", 1450);
+        CreateDummyFile(folderPath, "Screenshot_2026_11_15.png", 640);
 
-        // Cụm file giống tên (Book_Exported) & cặp file đa ngôn ngữ cùng tên khác đuôi
-        CreateDummyFile(folderPath, "Book_Exported.docx", 1200);
-        CreateDummyFile(folderPath, "Book_Exported (1).docx", 1240);
-        CreateDummyFile(folderPath, "Book_Exported (2).docx", 1290);
+        // Cụm tệp giống tên (mô phỏng tính năng Gom cụm thông minh của Sofol)
+        CreateDummyFile(folderPath, "Bao_cao_doanh_thu.xlsx", 1200);
+        CreateDummyFile(folderPath, "Bao_cao_doanh_thu (1).xlsx", 1240);
+        CreateDummyFile(folderPath, "Bao_cao_doanh_thu (2).xlsx", 1290);
 
-        CreateDummyFile(folderPath, "01.참관일지_양식_세종학당 및 한국어학당 수업 참관일지 (1).docx", 850);
-        CreateDummyFile(folderPath, "01.참관일지_양식_세종학당 및 한국어학당 수업 참관일지 (1).hwp", 790);
+        CreateDummyFile(folderPath, "Hop_dong_dich_vu_2026 (1).pdf", 850);
+        CreateDummyFile(folderPath, "Hop_dong_dich_vu_2026 (2).pdf", 890);
+        CreateDummyFile(folderPath, "Hop_dong_dich_vu_2026.docx", 920);
 
-        // Tài liệu & Bảng tính
-        CreateDummyFile(folderPath, "UI_UX_Design_Task_Estimation_Guide.docx", 1100);
-        CreateDummyFile(folderPath, "Báo cáo dự án_2026S2_0910.pdf", 3200);
-        CreateDummyFile(folderPath, "Lịch trình du lịch Hoa Binh.xlsx", 540);
-        CreateDummyFile(folderPath, "WorldFirst.docx", 420);
+        // Tài liệu văn phòng & Bảng tính
+        CreateDummyFile(folderPath, "Ke_hoach_cong_tac_nam_2026.docx", 1100);
+        CreateDummyFile(folderPath, "Tai_lieu_huong_dan_su_dung.pdf", 3200);
+        CreateDummyFile(folderPath, "Danh_sach_nhan_su_mau.xlsx", 540);
+        CreateDummyFile(folderPath, "Bai_thuyet_trinh_du_an.pptx", 4200);
 
-        // Cụm file tương đồng tên (Hóa đơn)
-        CreateDummyFile(folderPath, "Hoa_don_thang_09_2026.pdf", 410);
-        CreateDummyFile(folderPath, "Hoa_don_thang_10_2026.pdf", 435);
+        // Cụm hóa đơn tương đồng tên
+        CreateDummyFile(folderPath, "Hoa_don_tien_dien_thang_09.pdf", 410);
+        CreateDummyFile(folderPath, "Hoa_don_tien_dien_thang_10.pdf", 435);
 
-        // Bộ cài, nén, code & video
-        CreateDummyFile(folderPath, "CPIDNGSocks_v1.0.4.apk", 5100);
-        CreateDummyFile(folderPath, "OBS-Studio-32.1.2-Windows-x64-Installer.exe", 15400);
-        CreateDummyFile(folderPath, "MonaServer_Win64.zip", 2800);
-        CreateDummyFile(folderPath, "docugen-676bf-default-rtdb-gmm-task-export.json", 320);
-        CreateDummyFile(folderPath, "Recording 2026-05-11 131107.mp4", 8400);
+        // Video & Âm thanh
+        CreateDummyFile(folderPath, "Video_huong_dan_cai_dat.mp4", 8400);
+        CreateDummyFile(folderPath, "Nhac_khong_loi_thu_gian.mp3", 3500);
 
-        // File đang tải dở của trình duyệt (bắt buộc bỏ qua an toàn)
-        CreateDummyFile(folderPath, "Windows11_Update_Package.zip.crdownload", 4096);
+        // Bộ cài đặt & Tệp nén sao lưu
+        CreateDummyFile(folderPath, "Setup_PhanMemTienIch_v2.0.exe", 15400);
+        CreateDummyFile(folderPath, "Du_lieu_sao_luu_he_thong.zip", 5800);
+        CreateDummyFile(folderPath, "Cau_hinh_ung_dung_mau.json", 320);
+
+        // Tệp đang tải dở của trình duyệt (Sofol sẽ tự động bỏ qua an toàn)
+        CreateDummyFile(folderPath, "Goi_du_lieu_lon_dang_tai.zip.crdownload", 4096);
 
         return folderPath;
     }

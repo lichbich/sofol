@@ -322,7 +322,7 @@
                                             FontSize="11"
                                             FontWeight="SemiBold"
                                             Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                            Text="v1.1.0 (Bản mới nhất)" />
+                                            Text="v1.1.1 (Bản mới nhất)" />
                                     </Border>
                                 </StackPanel>
                                 <TextBlock

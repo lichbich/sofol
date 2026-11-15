@@ -79,11 +79,11 @@ public sealed class SmartGroupingSettings
 
     public bool EnableAutoWatcher { get; set; } = false;
 
-    public int AutoWatcherDelaySeconds { get; set; } = 10;
+    public int AutoWatcherDelaySeconds { get; set; } = 86400;
 
-    public int AutoWatcherDelayValue { get; set; } = 10;
+    public int AutoWatcherDelayValue { get; set; } = 1;
 
-    public WatcherDelayUnit AutoWatcherDelayUnit { get; set; } = WatcherDelayUnit.Seconds;
+    public WatcherDelayUnit AutoWatcherDelayUnit { get; set; } = WatcherDelayUnit.Days;
 
     public AppThemePreference AppTheme { get; set; } = AppThemePreference.System;
 
@@ -133,7 +133,7 @@ public sealed class AppConfiguration
 
     public List<OrganizationRule> Rules { get; set; } = [];
 
-    public string GitHubRepository { get; set; } = "trong/Sofol";
+    public string GitHubRepository { get; set; } = "lichbich/sofol";
 
     public bool AutoCheckUpdatesOnStartup { get; set; } = true;
 }

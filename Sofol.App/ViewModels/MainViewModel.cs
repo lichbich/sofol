@@ -365,12 +365,14 @@ public sealed partial class MainViewModel : ObservableObject
 
     // Cập nhật ứng dụng từ GitHub Releases
     [ObservableProperty]
-    private string _gitHubRepository = "trong/Sofol";
+    private string _gitHubRepository = "lichbich/sofol";
 
     partial void OnGitHubRepositoryChanged(string value)
     {
         if (_isInitializing) return;
-        _config.GitHubRepository = string.IsNullOrWhiteSpace(value) ? "trong/Sofol" : value.Trim();
+        _config.GitHubRepository = string.IsNullOrWhiteSpace(value) || value.Equals("trong/Sofol", StringComparison.OrdinalIgnoreCase)
+            ? "lichbich/sofol"
+            : value.Trim();
         SaveConfigurationOnly();
     }
 
@@ -429,7 +431,7 @@ public sealed partial class MainViewModel : ObservableObject
             IsUpdateInfoBarOpen = true;
             UpdateInfoBarSeverity = InfoBarSeverity.Informational;
             UpdateInfoBarTitle = "Đang kiểm tra...";
-            UpdateInfoBarMessage = "Đang kết nối tới GitHub Releases để tìm phiên bản mới...";
+            UpdateInfoBarMessage = "Đang kiểm tra xem có phiên bản mới hơn không...";
         }
 
         try
@@ -455,8 +457,8 @@ public sealed partial class MainViewModel : ObservableObject
                 UpdateInfoBarSeverity = InfoBarSeverity.Success;
                 UpdateInfoBarTitle = $"Đã có phiên bản mới v{info.LatestVersion}!";
                 UpdateInfoBarMessage = string.IsNullOrWhiteSpace(info.ReleaseNotes)
-                    ? $"Phiên bản mới hiện đã có sẵn trên GitHub. Bạn có thể cập nhật ngay bây giờ."
-                    : $"Tính năng mới: {info.ReleaseNotes}";
+                    ? "Đã có bản cập nhật mới. Bạn có thể bấm nút Cập nhật ngay bên dưới."
+                    : $"Nội dung mới: {info.ReleaseNotes}";
             }
             else
             {
@@ -465,19 +467,19 @@ public sealed partial class MainViewModel : ObservableObject
                 {
                     IsUpdateInfoBarOpen = true;
                     UpdateInfoBarSeverity = InfoBarSeverity.Informational;
-                    UpdateInfoBarTitle = "Đang là bản mới nhất";
+                    UpdateInfoBarTitle = "Bạn đang dùng bản mới nhất";
                     UpdateInfoBarMessage = $"Bạn đang sử dụng phiên bản v{CurrentAppVersion} mới nhất.";
                 }
             }
         }
-        catch (Exception ex)
+        catch
         {
             if (!silent)
             {
                 IsUpdateInfoBarOpen = true;
                 UpdateInfoBarSeverity = InfoBarSeverity.Error;
-                UpdateInfoBarTitle = "Lỗi";
-                UpdateInfoBarMessage = ex.Message;
+                UpdateInfoBarTitle = "Không thể kiểm tra bản cập nhật";
+                UpdateInfoBarMessage = "Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng của bạn.";
             }
         }
         finally
@@ -555,7 +557,9 @@ public sealed partial class MainViewModel : ObservableObject
         try
         {
             TargetFolderPath = _config.LastTargetFolder;
-            GitHubRepository = string.IsNullOrWhiteSpace(_config.GitHubRepository) ? "trong/Sofol" : _config.GitHubRepository;
+            GitHubRepository = string.IsNullOrWhiteSpace(_config.GitHubRepository) || _config.GitHubRepository.Equals("trong/Sofol", StringComparison.OrdinalIgnoreCase)
+                ? "lichbich/sofol"
+                : _config.GitHubRepository;
             AutoCheckUpdatesOnStartup = _config.AutoCheckUpdatesOnStartup;
             SmartGroupingSettings s = _config.SmartSettings;
             EnablePrefixSimilarityGrouping = s.EnablePrefixSimilarityGrouping;
@@ -1170,7 +1174,7 @@ public sealed partial class MainViewModel : ObservableObject
             WatcherActionButtonText = "Dừng tự động sắp xếp";
             WatcherCompactActionText = "Dừng tự động";
             WatcherActionButtonGlyph = "\uE71A";
-            WatcherStatusText = $"Đang theo dõi theo thời gian thực tại \"{activeFolder}\" (độ trễ an toàn: {delayDisplay}).";
+            WatcherStatusText = $"Đang theo dõi tại \"{activeFolder}\" (thời gian tự động dọn: {delayDisplay}).";
         }
         else
         {
