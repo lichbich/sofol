@@ -5,120 +5,107 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:Sofol.App.ViewModels">
 
-    <Grid Padding="28,20,28,24" RowSpacing="16">
+    <Grid Padding="28,20,28,24" RowSpacing="14">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Tiêu đề trang -->
+        <!-- Breadcrumb chuẩn Windows 11 Settings + nút tác vụ nhanh -->
         <Grid Grid.Row="0" ColumnSpacing="16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <StackPanel Spacing="4">
+
+            <StackPanel Grid.Column="0" Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Button
+                        Margin="-8,0,0,0"
+                        Padding="8,2"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Click="OnBreadcrumbWorkspaceClick"
+                        CornerRadius="6"
+                        ToolTipService.ToolTip="Quay lại Không gian dọn dẹp">
+                        <TextBlock
+                            FontSize="26"
+                            FontWeight="SemiBold"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="Không gian dọn dẹp" />
+                    </Button>
+                    <FontIcon
+                        Margin="2,4,2,0"
+                        VerticalAlignment="Center"
+                        FontSize="14"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Glyph="&#xE76C;" />
+                    <TextBlock
+                        VerticalAlignment="Center"
+                        FontSize="26"
+                        FontWeight="SemiBold"
+                        Text="{x:Bind ViewModel.TargetFolderDisplayName, Mode=OneWay}"
+                        TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+
                 <TextBlock
-                    Style="{StaticResource TitleTextBlockStyle}"
-                    Text="Dọn dẹp &amp; Xem trước"
-                    TextWrapping="Wrap" />
-                <TextBlock
+                    FontFamily="Cascadia Mono, Consolas"
+                    FontSize="12"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Text="Quét thư mục, tự động nhận diện cụm tệp giống tên và xem trước nơi lưu trữ trước khi di chuyển."
-                    TextWrapping="Wrap" />
+                    Text="{x:Bind ViewModel.TargetFolderPath, Mode=OneWay}"
+                    TextTrimming="CharacterEllipsis"
+                    ToolTipService.ToolTip="{x:Bind ViewModel.TargetFolderPath, Mode=OneWay}" />
             </StackPanel>
+
             <StackPanel
                 Grid.Column="1"
                 Orientation="Horizontal"
                 Spacing="8"
-                VerticalAlignment="Top">
-                <Button Click="OnCreateDemoSandboxClick" ToolTipService.ToolTip="Tạo thư mục mẫu mô phỏng Downloads lộn xộn để thử nghiệm an toàn">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon FontSize="14" Glyph="&#xE945;" />
-                        <TextBlock Text="Tạo thư mục Test mẫu" />
+                VerticalAlignment="Center">
+                <Button
+                    Command="{x:Bind ViewModel.PinTargetFolderToWatcherCommand}"
+                    Style="{StaticResource AccentButtonStyle}"
+                    ToolTipService.ToolTip="Thêm thư mục này vào danh sách Tự động sắp xếp chạy ngầm"
+                    Visibility="{x:Bind ViewModel.CanPinTargetFolderToWatcher, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE718;" />
+                        <TextBlock Text="+ Thêm vào Không gian dọn dẹp" />
                     </StackPanel>
                 </Button>
-                <Button Click="OnOpenFolderClick" ToolTipService.ToolTip="Mở thư mục đang chọn trong File Explorer">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon FontSize="14" Glyph="&#xE8A7;" />
-                        <TextBlock Text="Mở Explorer" />
+                <Button
+                    Command="{x:Bind ViewModel.OpenTargetFolderRulesCommand}"
+                    ToolTipService.ToolTip="Xem và chỉnh sửa quy tắc riêng của thư mục này">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE71C;" />
+                        <TextBlock Text="{x:Bind ViewModel.TargetFolderRuleButtonText, Mode=OneWay}" />
                     </StackPanel>
+                </Button>
+                <Button
+                    Click="OnBrowseFolderClick"
+                    ToolTipService.ToolTip="Quét xem trước một thư mục lẻ khác trên máy">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon FontSize="14" Glyph="&#xE838;" />
+                        <TextBlock Text="Chọn thư mục lẻ..." />
+                    </StackPanel>
+                </Button>
+                <Button Click="OnOpenFolderClick" ToolTipService.ToolTip="Mở thư mục trong File Explorer">
+                    <FontIcon FontSize="14" Glyph="&#xE8A7;" />
                 </Button>
             </StackPanel>
         </Grid>
 
-        <!-- Thanh chọn thư mục mục tiêu -->
-        <Border Grid.Row="1" Style="{StaticResource FluentCardStyle}" Padding="16,14">
-            <Grid RowSpacing="10">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-
-                <Grid Grid.Row="0" ColumnSpacing="10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <TextBox
-                        x:Name="FolderPathTextBox"
-                        KeyDown="OnFolderPathKeyDown"
-                        PlaceholderText="Nhập hoặc chọn đường dẫn thư mục cần sắp xếp (ví dụ: C:\Users\...\Downloads)"
-                        Text="{x:Bind ViewModel.TargetFolderPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-                    <Button
-                        Grid.Column="1"
-                        Click="OnBrowseFolderClick"
-                        Style="{StaticResource AccentButtonStyle}">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon FontSize="14" Glyph="&#xE838;" />
-                            <TextBlock Text="Chọn thư mục..." />
-                        </StackPanel>
-                    </Button>
-                </Grid>
-
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
-                    <TextBlock
-                        VerticalAlignment="Center"
-                        FontSize="12"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        Text="Chọn nhanh:" />
-                    <Button Click="OnQuickDownloadsClick" Padding="10,4" FontSize="12">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon FontSize="12" Glyph="&#xE896;" />
-                            <TextBlock Text="Downloads" />
-                        </StackPanel>
-                    </Button>
-                    <Button Click="OnQuickDesktopClick" Padding="10,4" FontSize="12">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon FontSize="12" Glyph="&#xE7F4;" />
-                            <TextBlock Text="Desktop" />
-                        </StackPanel>
-                    </Button>
-                    <Button Click="OnQuickDocumentsClick" Padding="10,4" FontSize="12">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon FontSize="12" Glyph="&#xE8A5;" />
-                            <TextBlock Text="Documents" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
-            </Grid>
-        </Border>
-
         <!-- Thông báo kết quả InfoBar -->
         <InfoBar
-            Grid.Row="2"
+            Grid.Row="1"
             IsOpen="{x:Bind ViewModel.IsInfoBarOpen, Mode=TwoWay}"
             Message="{x:Bind ViewModel.InfoBarMessage, Mode=OneWay}"
             Severity="{x:Bind ViewModel.InfoBarSeverity, Mode=OneWay}"
             Title="{x:Bind ViewModel.InfoBarTitle, Mode=OneWay}" />
 
         <!-- Bảng Xem trước (Preview Table) -->
-        <Border Grid.Row="3" Style="{StaticResource FluentCardStyle}" Padding="0">
+        <Border Grid.Row="2" Style="{StaticResource FluentCardStyle}" Padding="0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -126,7 +113,7 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <!-- Thanh tìm kiếm & bật tắt nhanh -->
+                <!-- Thanh tìm kiếm & bộ lọc -->
                 <Grid
                     Grid.Row="0"
                     Padding="16,12"
@@ -135,8 +122,6 @@
                     ColumnSpacing="12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
@@ -149,26 +134,12 @@
                     <ComboBox
                         Grid.Column="1"
                         SelectedIndex="{x:Bind ViewModel.SelectedFilterIndex, Mode=TwoWay}"
-                        Width="195">
+                        Width="210">
                         <ComboBoxItem Content="Tất cả tệp" />
                         <ComboBoxItem Content="Cụm tên thông minh" />
                         <ComboBoxItem Content="Sẵn sàng di chuyển" />
                         <ComboBoxItem Content="Không di chuyển / Giữ nguyên" />
                     </ComboBox>
-
-                    <ToggleSwitch
-                        Grid.Column="2"
-                        IsOn="{x:Bind ViewModel.EnablePrefixSimilarityGrouping, Mode=TwoWay}"
-                        OffContent="Gom tên giống: Tắt"
-                        OnContent="Gom tên giống: Bật"
-                        MinWidth="0" />
-
-                    <ToggleSwitch
-                        Grid.Column="3"
-                        IsOn="{x:Bind ViewModel.EnableExtensionRules, Mode=TwoWay}"
-                        OffContent="Theo đuôi: Tắt"
-                        OnContent="Theo đuôi: Bật"
-                        MinWidth="0" />
                 </Grid>
 
                 <!-- Tiêu đề cột -->
@@ -333,7 +304,7 @@
                     <TextBlock
                         HorizontalAlignment="Center"
                         Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        Text="Chọn thư mục khác hoặc bấm 'Tạo thư mục Test mẫu' ở góc trên để trải nghiệm ngay."
+                        Text="Thư mục chưa có tệp mới cần dọn. Bạn có thể bấm 'Quy tắc' ở góc trên để điều chỉnh cách phân loại."
                         TextAlignment="Center"
                         TextWrapping="Wrap" />
                 </StackPanel>
@@ -341,7 +312,7 @@
         </Border>
 
         <!-- Thanh tác vụ dưới cùng -->
-        <Border Grid.Row="4" Style="{StaticResource FluentCardStyle}" Padding="16,12">
+        <Border Grid.Row="3" Style="{StaticResource FluentCardStyle}" Padding="16,12">
             <Grid RowSpacing="10">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />

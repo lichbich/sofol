@@ -78,6 +78,50 @@ public sealed class ConfigAndHistoryStore
                         loaded.GitHubRepository = "lichbich/sofol";
                     }
 
+                    loaded.WatchedFolders ??= [];
+                    var seenPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    var normalizedProfiles = new List<WatchedFolderProfile>();
+                    foreach (WatchedFolderProfile profile in loaded.WatchedFolders)
+                    {
+                        string normalizedPath = WatchedFolderProfile.NormalizePath(profile.FolderPath);
+                        if (string.IsNullOrWhiteSpace(normalizedPath) || !seenPaths.Add(normalizedPath))
+                        {
+                            continue;
+                        }
+
+                        profile.FolderPath = normalizedPath;
+                        profile.CustomRules ??= [];
+                        normalizedProfiles.Add(profile);
+                    }
+                    loaded.WatchedFolders = normalizedProfiles;
+
+                    if ((loaded.ConfigSchemaVersion < 5 || loaded.WatchedFolders.Count == 0) &&
+                        !string.IsNullOrWhiteSpace(loaded.LastTargetFolder))
+                    {
+                        string normalizedLast = WatchedFolderProfile.NormalizePath(loaded.LastTargetFolder);
+                        if (!string.IsNullOrWhiteSpace(normalizedLast) &&
+                            loaded.FindWatchedFolder(normalizedLast) is null)
+                        {
+                            loaded.WatchedFolders.Add(WatchedFolderProfile.CreateForFolder(
+                                normalizedLast,
+                                loaded.SmartSettings,
+                                loaded.Rules));
+                        }
+                    }
+
+                    loaded.SmartSettings.EnableKeywordRules = true;
+                    foreach (WatchedFolderProfile profile in loaded.WatchedFolders)
+                    {
+                        if (loaded.ConfigSchemaVersion < 6 || profile.CustomSmartSettings is null)
+                        {
+                            profile.EnsureStandaloneInitialized(loaded.SmartSettings, loaded.Rules);
+                        }
+                        else
+                        {
+                            profile.CustomSmartSettings.EnableKeywordRules = true;
+                        }
+                    }
+
                     if (loaded.ConfigSchemaVersion < AppConfiguration.CurrentConfigSchemaVersion)
                     {
                         loaded.ConfigSchemaVersion = AppConfiguration.CurrentConfigSchemaVersion;
@@ -167,12 +211,19 @@ public sealed class ConfigAndHistoryStore
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             "Downloads");
 
+        bool hasDownloads = Directory.Exists(downloadsPath);
+        var smartSettings = new SmartGroupingSettings();
+        List<OrganizationRule> defaultRules = CreateDefaultRules();
+
         return new AppConfiguration
         {
             ConfigSchemaVersion = AppConfiguration.CurrentConfigSchemaVersion,
-            LastTargetFolder = Directory.Exists(downloadsPath) ? downloadsPath : string.Empty,
-            SmartSettings = new SmartGroupingSettings(),
-            Rules = CreateDefaultRules()
+            LastTargetFolder = hasDownloads ? downloadsPath : string.Empty,
+            SmartSettings = smartSettings,
+            Rules = defaultRules,
+            WatchedFolders = hasDownloads
+                ? [WatchedFolderProfile.CreateForFolder(downloadsPath, smartSettings, defaultRules)]
+                : []
         };
     }
 

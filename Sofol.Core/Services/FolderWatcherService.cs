@@ -10,63 +10,39 @@ using Sofol.Core.Models;
 namespace Sofol.Core.Services;
 
 /// <summary>
-/// Dịch vụ theo dõi thư mục theo thời gian thực bằng FileSystemWatcher.
-/// Tối ưu tài nguyên chạy ngầm: khi không có tệp chờ xử lý, bộ đếm sẽ ngủ hoàn toàn
-/// và chỉ thức dậy khi nhân Windows phát sự kiện tệp mới.
+/// Dịch vụ theo dõi một hoặc nhiều thư mục đồng thời theo thời gian thực bằng FileSystemWatcher.
+/// Tối ưu tài nguyên chạy ngầm: dùng chung 1 Timer duy nhất và tắt hẳn khi không có tệp chờ,
+/// CPU khi nghỉ bằng 0% và chỉ tăng ~64 KB bộ đệm cho mỗi thư mục theo dõi thêm.
 /// </summary>
 public sealed class FolderWatcherService : IDisposable
 {
     private static readonly TimeSpan MaxTimerDueTime = TimeSpan.FromHours(1);
 
-    private readonly FileOrganizerEngine _engine;
-    private readonly ConfigAndHistoryStore _store;
-    private readonly FileLockAndSafetyService _safetyService = new();
-    private readonly ConcurrentDictionary<string, DateTimeOffset> _pendingFiles = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, (long Length, DateTime LastWriteUtc)> _skippedSnapshot = new(StringComparer.OrdinalIgnoreCase);
-    private readonly SemaphoreSlim _processGate = new(1, 1);
-    private readonly object _syncRoot = new();
-
-    private FileSystemWatcher? _watcher;
-    private Timer? _debounceTimer;
-    private CancellationTokenSource? _runCts;
-    private AppConfiguration? _activeConfig;
-    private string _watchedFolder = string.Empty;
-
-    public event Action<string>? LogAdded;
-    public event Action<OrganizationSession>? SessionCompleted;
-    public event Action<bool, string>? StateChanged;
-
-    public bool IsRunning => _watcher is not null && _watcher.EnableRaisingEvents;
-
-    public string WatchedFolder => _watchedFolder;
-
-    public FolderWatcherService(FileOrganizerEngine engine, ConfigAndHistoryStore store)
+    private sealed class FolderWatchContext : IDisposable
     {
-        _engine = engine;
-        _store = store;
-    }
+        public string FolderPath { get; }
+        public string DisplayName { get; }
+        public FileSystemWatcher Watcher { get; }
+        public ConcurrentDictionary<string, DateTimeOffset> PendingFiles { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public ConcurrentDictionary<string, (long Length, DateTime LastWriteUtc)> SkippedSnapshot { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public void Start(string folderPath, AppConfiguration configuration)
-    {
-        Stop();
+        private readonly FileSystemEventHandler _onCreated;
+        private readonly FileSystemEventHandler _onChanged;
+        private readonly RenamedEventHandler _onRenamed;
+        private readonly ErrorEventHandler _onError;
+        private bool _disposed;
 
-        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+        public FolderWatchContext(
+            string folderPath,
+            Action<FolderWatchContext, FileSystemEventArgs> onFileEvent,
+            Action<FolderWatchContext, RenamedEventArgs> onFileRenamed,
+            Action<FolderWatchContext, ErrorEventArgs> onWatcherError)
         {
-            EmitLog($"Không thể bật Tự động sắp xếp: Thư mục không tồn tại ({folderPath}).");
-            return;
-        }
+            FolderPath = WatchedFolderProfile.NormalizePath(folderPath);
+            string leaf = Path.GetFileName(FolderPath);
+            DisplayName = string.IsNullOrWhiteSpace(leaf) ? FolderPath : leaf;
 
-        string delayDisplay = configuration.SmartSettings.GetAutoWatcherDelayDisplayText();
-
-        lock (_syncRoot)
-        {
-            _watchedFolder = folderPath;
-            _activeConfig = configuration;
-            _pendingFiles.Clear();
-            _skippedSnapshot.Clear();
-            _runCts = new CancellationTokenSource();
-
-            _watcher = new FileSystemWatcher(folderPath)
+            Watcher = new FileSystemWatcher(FolderPath)
             {
                 Filter = "*",
                 IncludeSubdirectories = false,
@@ -77,45 +53,348 @@ public sealed class FolderWatcherService : IDisposable
                              | NotifyFilters.CreationTime
             };
 
-            _watcher.Created += OnFileEvent;
-            _watcher.Changed += OnFileEvent;
-            _watcher.Renamed += OnFileRenamed;
-            _watcher.Error += OnWatcherError;
-            _watcher.EnableRaisingEvents = true;
+            _onCreated = (_, e) => onFileEvent(this, e);
+            _onChanged = (_, e) => onFileEvent(this, e);
+            _onRenamed = (_, e) => onFileRenamed(this, e);
+            _onError = (_, e) => onWatcherError(this, e);
 
-            // Khởi tạo Timer ở trạng thái ngủ; chỉ đánh thức khi thực sự có tệp đang chờ
-            _debounceTimer = new Timer(OnTimerTick, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            Watcher.Created += _onCreated;
+            Watcher.Changed += _onChanged;
+            Watcher.Renamed += _onRenamed;
+            Watcher.Error += _onError;
+            Watcher.EnableRaisingEvents = true;
         }
 
-        EmitLog($"Đã bắt đầu tự động sắp xếp thư mục: {folderPath} (thời gian tự động dọn: {delayDisplay}).");
-        StateChanged?.Invoke(true, folderPath);
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+            _disposed = true;
 
-        int existingCount = ScanDirectoryForNewCandidates(folderPath, isInitialScan: true);
+            try
+            {
+                Watcher.EnableRaisingEvents = false;
+                Watcher.Created -= _onCreated;
+                Watcher.Changed -= _onChanged;
+                Watcher.Renamed -= _onRenamed;
+                Watcher.Error -= _onError;
+                Watcher.Dispose();
+            }
+            catch
+            {
+                // Bỏ qua lỗi giải phóng watcher
+            }
+
+            PendingFiles.Clear();
+            SkippedSnapshot.Clear();
+        }
+    }
+
+    private readonly FileOrganizerEngine _engine;
+    private readonly ConfigAndHistoryStore _store;
+    private readonly FileLockAndSafetyService _safetyService = new();
+    private readonly Dictionary<string, FolderWatchContext> _contexts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly SemaphoreSlim _processGate = new(1, 1);
+    private readonly object _syncRoot = new();
+
+    private Timer? _debounceTimer;
+    private CancellationTokenSource? _runCts;
+    private AppConfiguration? _activeConfig;
+    private bool _isMultiFolderMode;
+
+    public event Action<string>? LogAdded;
+    public event Action<OrganizationSession>? SessionCompleted;
+    public event Action<bool, string>? StateChanged;
+    public event Action? PendingCountsChanged;
+
+    public bool IsRunning
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _contexts.Count > 0;
+            }
+        }
+    }
+
+    public int ActiveFolderCount
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _contexts.Count;
+            }
+        }
+    }
+
+    public string WatchedFolder
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _contexts.Values.FirstOrDefault()?.FolderPath ?? string.Empty;
+            }
+        }
+    }
+
+    public IReadOnlyList<string> ActiveWatchedFolders
+    {
+        get
+        {
+            lock (_syncRoot)
+            {
+                return _contexts.Values.Select(c => c.FolderPath).ToList();
+            }
+        }
+    }
+
+    public FolderWatcherService(FileOrganizerEngine engine, ConfigAndHistoryStore store)
+    {
+        _engine = engine;
+        _store = store;
+    }
+
+    public int GetPendingCount(string? folderPath)
+    {
+        string normalized = WatchedFolderProfile.NormalizePath(folderPath);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return 0;
+        }
+
+        lock (_syncRoot)
+        {
+            return _contexts.TryGetValue(normalized, out FolderWatchContext? ctx)
+                ? ctx.PendingFiles.Count
+                : 0;
+        }
+    }
+
+    public void Start(string folderPath, AppConfiguration configuration)
+    {
+        Stop();
+
+        string normalized = WatchedFolderProfile.NormalizePath(folderPath);
+        if (string.IsNullOrWhiteSpace(normalized) || !Directory.Exists(normalized))
+        {
+            EmitLog($"Không thể bật Tự động sắp xếp: Thư mục không tồn tại ({folderPath}).");
+            return;
+        }
+
+        FolderWatchContext? createdCtx = null;
+        lock (_syncRoot)
+        {
+            _isMultiFolderMode = false;
+            _activeConfig = configuration;
+            _runCts = new CancellationTokenSource();
+            _debounceTimer = new Timer(OnTimerTick, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+
+            createdCtx = new FolderWatchContext(normalized, OnFileEvent, OnFileRenamed, OnWatcherError);
+            _contexts[normalized] = createdCtx;
+        }
+
+        string delayDisplay = GetDelayDisplayForFolder(normalized, configuration);
+        EmitLog($"Đã bắt đầu tự động sắp xếp thư mục: {normalized} (thời gian tự động dọn: {delayDisplay}).");
+        StateChanged?.Invoke(true, normalized);
+
+        int existingCount = ScanDirectoryForNewCandidates(createdCtx, isInitialScan: true);
         if (existingCount > 0)
         {
-            EmitLog($"Phát hiện {existingCount} tệp hiện có trong thư mục — sẽ tự động dọn sau {delayDisplay}.");
+            EmitLog($"[{createdCtx.DisplayName}] Phát hiện {existingCount} tệp hiện có — sẽ tự động dọn sau {delayDisplay}.");
             ScheduleNextTimerTick();
         }
+        PendingCountsChanged?.Invoke();
+    }
+
+    public void StartConfiguredFolders(AppConfiguration configuration)
+    {
+        Stop();
+
+        var validFolders = (configuration.WatchedFolders ?? [])
+            .Where(f => f.IsEnabled && !string.IsNullOrWhiteSpace(f.FolderPath) && Directory.Exists(f.FolderPath))
+            .Select(f => WatchedFolderProfile.NormalizePath(f.FolderPath))
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (validFolders.Count == 0)
+        {
+            EmitLog("Không có thư mục hợp lệ nào đang bật để theo dõi tự động.");
+            return;
+        }
+
+        var startedContexts = new List<FolderWatchContext>();
+        lock (_syncRoot)
+        {
+            _isMultiFolderMode = true;
+            _activeConfig = configuration;
+            _runCts = new CancellationTokenSource();
+            _debounceTimer = new Timer(OnTimerTick, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+
+            foreach (string folderPath in validFolders)
+            {
+                try
+                {
+                    var ctx = new FolderWatchContext(folderPath, OnFileEvent, OnFileRenamed, OnWatcherError);
+                    _contexts[folderPath] = ctx;
+                    startedContexts.Add(ctx);
+                }
+                catch (Exception ex)
+                {
+                    EmitLog($"[Cảnh báo] Không thể theo dõi \"{folderPath}\": {ex.Message}");
+                }
+            }
+
+            if (_contexts.Count == 0)
+            {
+                _debounceTimer?.Dispose();
+                _debounceTimer = null;
+                _runCts?.Dispose();
+                _runCts = null;
+                return;
+            }
+        }
+
+        string firstFolder = startedContexts[0].FolderPath;
+        EmitLog($"Đã bật tự động sắp xếp cho {startedContexts.Count} thư mục: {string.Join(", ", startedContexts.Select(c => c.DisplayName))}.");
+        StateChanged?.Invoke(true, firstFolder);
+
+        bool anyPending = false;
+        foreach (FolderWatchContext ctx in startedContexts)
+        {
+            int existingCount = ScanDirectoryForNewCandidates(ctx, isInitialScan: true);
+            if (existingCount > 0)
+            {
+                anyPending = true;
+                string delayDisplay = GetDelayDisplayForFolder(ctx.FolderPath, configuration);
+                EmitLog($"[{ctx.DisplayName}] Phát hiện {existingCount} tệp hiện có — sẽ tự động dọn sau {delayDisplay}.");
+            }
+        }
+
+        if (anyPending)
+        {
+            ScheduleNextTimerTick();
+        }
+        PendingCountsChanged?.Invoke();
     }
 
     public void UpdateConfiguration(AppConfiguration configuration)
     {
-        string? runningFolder = null;
+        bool shouldStopAll = false;
+        var removedContexts = new List<FolderWatchContext>();
+        var addedContexts = new List<FolderWatchContext>();
+        var existingContexts = new List<FolderWatchContext>();
+        bool isRunningNow;
+        bool multiMode;
+
         lock (_syncRoot)
         {
             _activeConfig = configuration;
-            _skippedSnapshot.Clear();
-            if (_watcher is not null && _watcher.EnableRaisingEvents && !string.IsNullOrWhiteSpace(_watchedFolder))
+            isRunningNow = _contexts.Count > 0;
+            multiMode = _isMultiFolderMode;
+
+            if (isRunningNow)
             {
-                runningFolder = _watchedFolder;
+                if (multiMode)
+                {
+                    var desiredPaths = (configuration.WatchedFolders ?? [])
+                        .Where(f => f.IsEnabled && !string.IsNullOrWhiteSpace(f.FolderPath) && Directory.Exists(f.FolderPath))
+                        .Select(f => WatchedFolderProfile.NormalizePath(f.FolderPath))
+                        .Where(p => !string.IsNullOrWhiteSpace(p))
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                    foreach (string currentPath in _contexts.Keys.ToList())
+                    {
+                        if (!desiredPaths.Contains(currentPath))
+                        {
+                            removedContexts.Add(_contexts[currentPath]);
+                            _contexts.Remove(currentPath);
+                        }
+                    }
+
+                    foreach (FolderWatchContext ctx in _contexts.Values)
+                    {
+                        ctx.SkippedSnapshot.Clear();
+                        existingContexts.Add(ctx);
+                    }
+
+                    foreach (string targetPath in desiredPaths)
+                    {
+                        if (!_contexts.ContainsKey(targetPath))
+                        {
+                            try
+                            {
+                                var newCtx = new FolderWatchContext(targetPath, OnFileEvent, OnFileRenamed, OnWatcherError);
+                                _contexts[targetPath] = newCtx;
+                                addedContexts.Add(newCtx);
+                            }
+                            catch (Exception ex)
+                            {
+                                EmitLog($"[Cảnh báo] Không thể thêm theo dõi \"{targetPath}\": {ex.Message}");
+                            }
+                        }
+                    }
+
+                    if (_contexts.Count == 0)
+                    {
+                        shouldStopAll = true;
+                    }
+                }
+                else
+                {
+                    foreach (FolderWatchContext ctx in _contexts.Values)
+                    {
+                        ctx.SkippedSnapshot.Clear();
+                        existingContexts.Add(ctx);
+                    }
+                }
             }
         }
 
-        if (runningFolder is not null)
+        foreach (FolderWatchContext removed in removedContexts)
         {
-            ScanDirectoryForNewCandidates(runningFolder, isInitialScan: true);
-            ScheduleNextTimerTick();
+            EmitLog($"[{removed.DisplayName}] Đã tạm dừng theo dõi.");
+            removed.Dispose();
         }
+
+        if (shouldStopAll)
+        {
+            Stop();
+            return;
+        }
+
+        if (!isRunningNow)
+        {
+            return;
+        }
+
+        foreach (FolderWatchContext added in addedContexts)
+        {
+            string delayDisplay = GetDelayDisplayForFolder(added.FolderPath, configuration);
+            EmitLog($"[{added.DisplayName}] Đã bật theo dõi tự động (chờ {delayDisplay}).");
+            int existingCount = ScanDirectoryForNewCandidates(added, isInitialScan: true);
+            if (existingCount > 0)
+            {
+                EmitLog($"[{added.DisplayName}] Phát hiện {existingCount} tệp hiện có — sẽ tự động dọn sau {delayDisplay}.");
+            }
+        }
+
+        foreach (FolderWatchContext existing in existingContexts)
+        {
+            ScanDirectoryForNewCandidates(existing, isInitialScan: true);
+        }
+
+        ScheduleNextTimerTick();
+        if (addedContexts.Count > 0 || removedContexts.Count > 0)
+        {
+            StateChanged?.Invoke(true, WatchedFolder);
+        }
+        PendingCountsChanged?.Invoke();
     }
 
     public void Stop()
@@ -123,11 +402,12 @@ public sealed class FolderWatcherService : IDisposable
         bool wasRunning;
         string stoppedFolder;
         CancellationTokenSource? ctsToDispose;
+        List<FolderWatchContext> contextsToDispose;
 
         lock (_syncRoot)
         {
-            wasRunning = _watcher is not null;
-            stoppedFolder = _watchedFolder;
+            wasRunning = _contexts.Count > 0;
+            stoppedFolder = _contexts.Values.FirstOrDefault()?.FolderPath ?? string.Empty;
 
             _debounceTimer?.Dispose();
             _debounceTimer = null;
@@ -135,19 +415,13 @@ public sealed class FolderWatcherService : IDisposable
             ctsToDispose = _runCts;
             _runCts = null;
 
-            if (_watcher is not null)
-            {
-                _watcher.EnableRaisingEvents = false;
-                _watcher.Created -= OnFileEvent;
-                _watcher.Changed -= OnFileEvent;
-                _watcher.Renamed -= OnFileRenamed;
-                _watcher.Error -= OnWatcherError;
-                _watcher.Dispose();
-                _watcher = null;
-            }
+            contextsToDispose = _contexts.Values.ToList();
+            _contexts.Clear();
+        }
 
-            _pendingFiles.Clear();
-            _skippedSnapshot.Clear();
+        foreach (FolderWatchContext ctx in contextsToDispose)
+        {
+            ctx.Dispose();
         }
 
         if (ctsToDispose is not null)
@@ -170,23 +444,73 @@ public sealed class FolderWatcherService : IDisposable
         {
             EmitLog("Đã dừng chế độ tự động sắp xếp.");
             StateChanged?.Invoke(false, stoppedFolder);
+            PendingCountsChanged?.Invoke();
         }
     }
 
     public async Task<int> ProcessImmediatelyAsync()
     {
-        string folderPath;
+        List<FolderWatchContext> snapshot;
         AppConfiguration? config;
         CancellationToken ct;
 
         lock (_syncRoot)
         {
-            folderPath = _watchedFolder;
+            snapshot = _contexts.Values.ToList();
             config = _activeConfig;
             ct = _runCts?.Token ?? CancellationToken.None;
         }
 
-        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath) || config is null)
+        if (snapshot.Count == 0 || config is null)
+        {
+            return 0;
+        }
+
+        int totalMoved = 0;
+        await _processGate.WaitAsync(ct);
+        try
+        {
+            foreach (FolderWatchContext ctx in snapshot)
+            {
+                if (ct.IsCancellationRequested || !Directory.Exists(ctx.FolderPath))
+                {
+                    continue;
+                }
+
+                ctx.SkippedSnapshot.Clear();
+                totalMoved += await ProcessPendingForContextAsync(ctx, config, forceImmediate: true, ct);
+            }
+        }
+        finally
+        {
+            _processGate.Release();
+            ScheduleNextTimerTick();
+            PendingCountsChanged?.Invoke();
+        }
+
+        return totalMoved;
+    }
+
+    public async Task<int> ProcessFolderImmediatelyAsync(string folderPath, AppConfiguration? fallbackConfig = null)
+    {
+        string normalized = WatchedFolderProfile.NormalizePath(folderPath);
+        if (string.IsNullOrWhiteSpace(normalized) || !Directory.Exists(normalized))
+        {
+            return 0;
+        }
+
+        FolderWatchContext? activeCtx;
+        AppConfiguration? config;
+        CancellationToken ct;
+
+        lock (_syncRoot)
+        {
+            _contexts.TryGetValue(normalized, out activeCtx);
+            config = _activeConfig ?? fallbackConfig;
+            ct = _runCts?.Token ?? CancellationToken.None;
+        }
+
+        if (config is null)
         {
             return 0;
         }
@@ -194,17 +518,23 @@ public sealed class FolderWatcherService : IDisposable
         await _processGate.WaitAsync(ct);
         try
         {
-            _skippedSnapshot.Clear();
-            return await ProcessPendingInternalAsync(folderPath, config, forceImmediate: true, ct);
+            if (activeCtx is not null)
+            {
+                activeCtx.SkippedSnapshot.Clear();
+                return await ProcessPendingForContextAsync(activeCtx, config, forceImmediate: true, ct);
+            }
+
+            return await AnalyzeAndExecuteFolderOnceAsync(normalized, config, ct);
         }
         finally
         {
             _processGate.Release();
             ScheduleNextTimerTick();
+            PendingCountsChanged?.Invoke();
         }
     }
 
-    private void OnFileEvent(object sender, FileSystemEventArgs e)
+    private void OnFileEvent(FolderWatchContext ctx, FileSystemEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(e.FullPath) || !File.Exists(e.FullPath))
         {
@@ -212,62 +542,60 @@ public sealed class FolderWatcherService : IDisposable
         }
 
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        bool isNew = _pendingFiles.TryAdd(e.FullPath, now);
+        bool isNew = ctx.PendingFiles.TryAdd(e.FullPath, now);
         if (!isNew)
         {
-            _pendingFiles[e.FullPath] = now;
+            ctx.PendingFiles[e.FullPath] = now;
         }
 
-        _skippedSnapshot.TryRemove(e.FullPath, out _);
+        ctx.SkippedSnapshot.TryRemove(e.FullPath, out _);
 
         if (isNew)
         {
-            // Xóa snapshot tổng để các tệp cũ có thể ghép cụm Smart Grouping cùng tệp vừa thêm
-            _skippedSnapshot.Clear();
-            string delayDisplay = GetCurrentDelayDisplay();
-            EmitLog($"Phát hiện tệp mới: {Path.GetFileName(e.FullPath)} — sẽ tự động dọn sau {delayDisplay}.");
+            // Xóa snapshot tổng của thư mục này để các tệp cũ có thể ghép cụm Smart Grouping cùng tệp vừa thêm
+            ctx.SkippedSnapshot.Clear();
+            string delayDisplay = GetCurrentDelayDisplay(ctx.FolderPath);
+            EmitLog($"[{ctx.DisplayName}] Phát hiện tệp mới: {Path.GetFileName(e.FullPath)} — sẽ tự động dọn sau {delayDisplay}.");
+            PendingCountsChanged?.Invoke();
         }
 
         ScheduleNextTimerTick();
     }
 
-    private void OnFileRenamed(object sender, RenamedEventArgs e)
+    private void OnFileRenamed(FolderWatchContext ctx, RenamedEventArgs e)
     {
         if (!string.IsNullOrWhiteSpace(e.OldFullPath))
         {
-            _pendingFiles.TryRemove(e.OldFullPath, out _);
-            _skippedSnapshot.TryRemove(e.OldFullPath, out _);
+            ctx.PendingFiles.TryRemove(e.OldFullPath, out _);
+            ctx.SkippedSnapshot.TryRemove(e.OldFullPath, out _);
         }
 
         if (string.IsNullOrWhiteSpace(e.FullPath) || !File.Exists(e.FullPath))
         {
             ScheduleNextTimerTick();
+            PendingCountsChanged?.Invoke();
             return;
         }
 
-        _pendingFiles[e.FullPath] = DateTimeOffset.UtcNow;
-        _skippedSnapshot.Clear();
+        ctx.PendingFiles[e.FullPath] = DateTimeOffset.UtcNow;
+        ctx.SkippedSnapshot.Clear();
 
-        string delayDisplay = GetCurrentDelayDisplay();
-        EmitLog($"Phát hiện tệp mới/đổi tên: {Path.GetFileName(e.FullPath)} — sẽ tự động dọn sau {delayDisplay}.");
+        string delayDisplay = GetCurrentDelayDisplay(ctx.FolderPath);
+        EmitLog($"[{ctx.DisplayName}] Phát hiện tệp mới/đổi tên: {Path.GetFileName(e.FullPath)} — sẽ tự động dọn sau {delayDisplay}.");
         ScheduleNextTimerTick();
+        PendingCountsChanged?.Invoke();
     }
 
-    private void OnWatcherError(object sender, ErrorEventArgs e)
+    private void OnWatcherError(FolderWatchContext ctx, ErrorEventArgs e)
     {
         Exception? ex = e.GetException();
-        EmitLog($"[Cảnh báo] Kết nối sự kiện hệ thống tệp tạm gián đoạn: {ex?.Message ?? "Không rõ nguyên nhân"}. Hệ thống đang quét lại thư mục.");
+        EmitLog($"[{ctx.DisplayName}] [Cảnh báo] Kết nối sự kiện hệ thống tệp tạm gián đoạn: {ex?.Message ?? "Không rõ nguyên nhân"}. Hệ thống đang quét lại thư mục.");
 
-        string folderPath;
-        lock (_syncRoot)
+        if (Directory.Exists(ctx.FolderPath))
         {
-            folderPath = _watchedFolder;
-        }
-
-        if (!string.IsNullOrWhiteSpace(folderPath) && Directory.Exists(folderPath))
-        {
-            ScanDirectoryForNewCandidates(folderPath, isInitialScan: false);
+            ScanDirectoryForNewCandidates(ctx, isInitialScan: false);
             ScheduleNextTimerTick();
+            PendingCountsChanged?.Invoke();
         }
     }
 
@@ -275,22 +603,38 @@ public sealed class FolderWatcherService : IDisposable
     {
         lock (_syncRoot)
         {
-            if (_debounceTimer is null || _watcher is null || _activeConfig is null)
+            if (_debounceTimer is null || _contexts.Count == 0 || _activeConfig is null)
             {
                 return;
             }
 
-            if (_pendingFiles.IsEmpty)
+            DateTimeOffset? earliestReadyAt = null;
+            foreach (FolderWatchContext ctx in _contexts.Values)
             {
-                // Khi hàng đợi rỗng, tắt hẳn Timer để mức CPU khi chạy ngầm bằng 0
+                if (ctx.PendingFiles.IsEmpty)
+                {
+                    continue;
+                }
+
+                TimeSpan folderDelay = GetDelayForFolder(ctx.FolderPath, _activeConfig);
+                foreach (DateTimeOffset detectedAt in ctx.PendingFiles.Values)
+                {
+                    DateTimeOffset readyAt = detectedAt.Add(folderDelay);
+                    if (earliestReadyAt is null || readyAt < earliestReadyAt.Value)
+                    {
+                        earliestReadyAt = readyAt;
+                    }
+                }
+            }
+
+            if (earliestReadyAt is null)
+            {
+                // Khi tất cả hàng đợi đều rỗng, tắt hẳn Timer để mức CPU khi chạy ngầm bằng 0
                 _debounceTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
                 return;
             }
 
-            TimeSpan delay = _activeConfig.SmartSettings.GetAutoWatcherDelayTimeSpan();
-            DateTimeOffset earliestReadyAt = _pendingFiles.Values.Min().Add(delay);
-            TimeSpan remaining = earliestReadyAt - DateTimeOffset.UtcNow;
-
+            TimeSpan remaining = earliestReadyAt.Value - DateTimeOffset.UtcNow;
             TimeSpan dueTime;
             if (remaining <= TimeSpan.Zero)
             {
@@ -313,22 +657,22 @@ public sealed class FolderWatcherService : IDisposable
         }
     }
 
-    private int ScanDirectoryForNewCandidates(string folderPath, bool isInitialScan)
+    private int ScanDirectoryForNewCandidates(FolderWatchContext ctx, bool isInitialScan)
     {
-        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+        if (!Directory.Exists(ctx.FolderPath))
         {
             return 0;
         }
 
         int newCount = 0;
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        string delayDisplay = GetCurrentDelayDisplay();
+        string delayDisplay = GetCurrentDelayDisplay(ctx.FolderPath);
 
         try
         {
-            foreach (string filePath in Directory.EnumerateFiles(folderPath, "*", SearchOption.TopDirectoryOnly))
+            foreach (string filePath in Directory.EnumerateFiles(ctx.FolderPath, "*", SearchOption.TopDirectoryOnly))
             {
-                if (_pendingFiles.ContainsKey(filePath))
+                if (ctx.PendingFiles.ContainsKey(filePath))
                 {
                     continue;
                 }
@@ -341,19 +685,19 @@ public sealed class FolderWatcherService : IDisposable
                         continue;
                     }
 
-                    if (_skippedSnapshot.TryGetValue(filePath, out var snap) &&
+                    if (ctx.SkippedSnapshot.TryGetValue(filePath, out var snap) &&
                         snap.Length == fi.Length &&
                         snap.LastWriteUtc == fi.LastWriteTimeUtc)
                     {
                         continue;
                     }
 
-                    if (_pendingFiles.TryAdd(filePath, now))
+                    if (ctx.PendingFiles.TryAdd(filePath, now))
                     {
                         newCount++;
                         if (!isInitialScan)
                         {
-                            EmitLog($"Phát hiện tệp mới: {fi.Name} — sẽ tự động dọn sau {delayDisplay}.");
+                            EmitLog($"[{ctx.DisplayName}] Phát hiện tệp mới: {fi.Name} — sẽ tự động dọn sau {delayDisplay}.");
                         }
                     }
                 }
@@ -380,28 +724,36 @@ public sealed class FolderWatcherService : IDisposable
 
         try
         {
-            string folderPath;
+            List<FolderWatchContext> snapshot;
             AppConfiguration? config;
             CancellationToken ct;
 
             lock (_syncRoot)
             {
-                if (_watcher is null || _activeConfig is null || string.IsNullOrWhiteSpace(_watchedFolder))
+                if (_contexts.Count == 0 || _activeConfig is null)
                 {
                     return;
                 }
 
-                folderPath = _watchedFolder;
+                snapshot = _contexts.Values.ToList();
                 config = _activeConfig;
                 ct = _runCts?.Token ?? CancellationToken.None;
             }
 
-            if (ct.IsCancellationRequested || !Directory.Exists(folderPath))
+            if (ct.IsCancellationRequested)
             {
                 return;
             }
 
-            await ProcessPendingInternalAsync(folderPath, config, forceImmediate: false, ct);
+            foreach (FolderWatchContext ctx in snapshot)
+            {
+                if (ct.IsCancellationRequested || ctx.PendingFiles.IsEmpty || !Directory.Exists(ctx.FolderPath))
+                {
+                    continue;
+                }
+
+                await ProcessPendingForContextAsync(ctx, config, forceImmediate: false, ct);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -415,30 +767,31 @@ public sealed class FolderWatcherService : IDisposable
         {
             _processGate.Release();
             ScheduleNextTimerTick();
+            PendingCountsChanged?.Invoke();
         }
     }
 
-    private async Task<int> ProcessPendingInternalAsync(
-        string folderPath,
-        AppConfiguration config,
+    private async Task<int> ProcessPendingForContextAsync(
+        FolderWatchContext ctx,
+        AppConfiguration globalConfig,
         bool forceImmediate,
         CancellationToken cancellationToken)
     {
-        if (!Directory.Exists(folderPath))
+        if (!Directory.Exists(ctx.FolderPath))
         {
             return 0;
         }
 
-        TimeSpan delay = config.SmartSettings.GetAutoWatcherDelayTimeSpan();
+        TimeSpan delay = GetDelayForFolder(ctx.FolderPath, globalConfig);
         List<string> candidatePaths;
         if (forceImmediate)
         {
-            candidatePaths = Directory.EnumerateFiles(folderPath, "*", SearchOption.TopDirectoryOnly).ToList();
+            candidatePaths = Directory.EnumerateFiles(ctx.FolderPath, "*", SearchOption.TopDirectoryOnly).ToList();
         }
         else
         {
             DateTimeOffset cutoff = DateTimeOffset.UtcNow.Subtract(delay);
-            candidatePaths = _pendingFiles
+            candidatePaths = ctx.PendingFiles
                 .Where(kv => kv.Value <= cutoff)
                 .Select(kv => kv.Key)
                 .ToList();
@@ -458,8 +811,8 @@ public sealed class FolderWatcherService : IDisposable
             }
             else
             {
-                _pendingFiles.TryRemove(path, out _);
-                _skippedSnapshot.TryRemove(path, out _);
+                ctx.PendingFiles.TryRemove(path, out _);
+                ctx.SkippedSnapshot.TryRemove(path, out _);
             }
         }
 
@@ -468,7 +821,8 @@ public sealed class FolderWatcherService : IDisposable
             return 0;
         }
 
-        FolderAnalysisResult analysis = await _engine.AnalyzeFolderAsync(folderPath, config, cancellationToken);
+        AppConfiguration effectiveConfig = globalConfig.BuildEffectiveConfigurationForFolder(ctx.FolderPath);
+        FolderAnalysisResult analysis = await _engine.AnalyzeFolderAsync(ctx.FolderPath, effectiveConfig, cancellationToken);
         var itemsToMove = new List<FileMovePlanItem>();
 
         foreach (FileMovePlanItem item in analysis.Items)
@@ -483,21 +837,18 @@ public sealed class FolderWatcherService : IDisposable
                 var fi = new FileInfo(item.SourcePath);
                 if (fi.Exists && _safetyService.IsPassiveIgnoredFile(fi))
                 {
-                    // Tệp tải dở (.crdownload, .part, .tmp) hoặc tệp hệ thống (desktop.ini):
-                    // lưu dấu vết và đưa Timer về nghỉ hoàn toàn cho đến khi có sự kiện đổi tên/ghi mới.
-                    _pendingFiles.TryRemove(item.SourcePath, out _);
-                    TryRecordSkippedSnapshot(item.SourcePath);
+                    ctx.PendingFiles.TryRemove(item.SourcePath, out _);
+                    TryRecordSkippedSnapshot(ctx, item.SourcePath);
                 }
                 else
                 {
-                    // Tệp thường đang bị ứng dụng khác khóa tạm thời: hẹn kiểm tra lại sau 5 giây.
-                    _pendingFiles[item.SourcePath] = DateTimeOffset.UtcNow - delay + TimeSpan.FromSeconds(5);
+                    ctx.PendingFiles[item.SourcePath] = DateTimeOffset.UtcNow - delay + TimeSpan.FromSeconds(5);
                 }
 
                 continue;
             }
 
-            _pendingFiles.TryRemove(item.SourcePath, out _);
+            ctx.PendingFiles.TryRemove(item.SourcePath, out _);
 
             if (item.Status == PlanItemStatus.Ready && item.IsSelected)
             {
@@ -505,7 +856,7 @@ public sealed class FolderWatcherService : IDisposable
             }
             else
             {
-                TryRecordSkippedSnapshot(item.SourcePath);
+                TryRecordSkippedSnapshot(ctx, item.SourcePath);
             }
         }
 
@@ -515,17 +866,16 @@ public sealed class FolderWatcherService : IDisposable
         }
 
         ExecutionResult execution = await _engine.ExecutePlanAsync(
-            folderPath,
+            ctx.FolderPath,
             itemsToMove,
-            config.SmartSettings.ConflictBehavior,
+            effectiveConfig.SmartSettings.ConflictBehavior,
             cancellationToken: cancellationToken);
 
         foreach (FileMovePlanItem item in itemsToMove)
         {
             if (item.Status == PlanItemStatus.Failed && File.Exists(item.SourcePath))
             {
-                // Hẹn kiểm tra lại sau 5 giây nếu tệp bị khóa đúng lúc di chuyển
-                _pendingFiles[item.SourcePath] = DateTimeOffset.UtcNow - delay + TimeSpan.FromSeconds(5);
+                ctx.PendingFiles[item.SourcePath] = DateTimeOffset.UtcNow - delay + TimeSpan.FromSeconds(5);
             }
         }
 
@@ -540,25 +890,70 @@ public sealed class FolderWatcherService : IDisposable
                 details += $" (+{execution.Session.Records.Count - 3} tệp khác)";
             }
 
-            EmitLog($"[Tự động] Đã sắp xếp {execution.MovedCount} tệp: {details}");
+            EmitLog($"[{ctx.DisplayName}] [Tự động] Đã sắp xếp {execution.MovedCount} tệp: {details}");
             SessionCompleted?.Invoke(execution.Session);
         }
         else if (execution.SkippedCount > 0)
         {
-            EmitLog($"[Tự động] Đã kiểm tra {itemsToMove.Count} tệp nhưng bỏ qua do trùng tên tại đích.");
+            EmitLog($"[{ctx.DisplayName}] [Tự động] Đã kiểm tra {itemsToMove.Count} tệp nhưng bỏ qua do trùng tên tại đích.");
         }
 
         return execution.MovedCount;
     }
 
-    private void TryRecordSkippedSnapshot(string filePath)
+    private async Task<int> AnalyzeAndExecuteFolderOnceAsync(
+        string folderPath,
+        AppConfiguration globalConfig,
+        CancellationToken cancellationToken)
+    {
+        AppConfiguration effectiveConfig = globalConfig.BuildEffectiveConfigurationForFolder(folderPath);
+        FolderAnalysisResult analysis = await _engine.AnalyzeFolderAsync(folderPath, effectiveConfig, cancellationToken);
+        List<FileMovePlanItem> itemsToMove = analysis.Items
+            .Where(i => i.Status == PlanItemStatus.Ready && i.IsSelected)
+            .ToList();
+
+        if (itemsToMove.Count == 0)
+        {
+            return 0;
+        }
+
+        ExecutionResult execution = await _engine.ExecutePlanAsync(
+            folderPath,
+            itemsToMove,
+            effectiveConfig.SmartSettings.ConflictBehavior,
+            cancellationToken: cancellationToken);
+
+        if (execution.Session is not null && execution.MovedCount > 0)
+        {
+            _store.AddSession(execution.Session);
+            string displayName = Path.GetFileName(folderPath);
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                displayName = folderPath;
+            }
+
+            string details = string.Join(", ",
+                execution.Session.Records.Take(3).Select(r => $"{r.FileName} → {r.RelativeDestinationFolder}"));
+            if (execution.Session.Records.Count > 3)
+            {
+                details += $" (+{execution.Session.Records.Count - 3} tệp khác)";
+            }
+
+            EmitLog($"[{displayName}] [Dọn ngay] Đã sắp xếp {execution.MovedCount} tệp: {details}");
+            SessionCompleted?.Invoke(execution.Session);
+        }
+
+        return execution.MovedCount;
+    }
+
+    private static void TryRecordSkippedSnapshot(FolderWatchContext ctx, string filePath)
     {
         try
         {
             var fi = new FileInfo(filePath);
             if (fi.Exists)
             {
-                _skippedSnapshot[filePath] = (fi.Length, fi.LastWriteTimeUtc);
+                ctx.SkippedSnapshot[filePath] = (fi.Length, fi.LastWriteTimeUtc);
             }
         }
         catch
@@ -567,11 +962,29 @@ public sealed class FolderWatcherService : IDisposable
         }
     }
 
-    private string GetCurrentDelayDisplay()
+    private static TimeSpan GetDelayForFolder(string folderPath, AppConfiguration globalConfig)
+    {
+        WatchedFolderProfile? profile = globalConfig.FindWatchedFolder(folderPath);
+        return profile is not null
+            ? profile.GetEffectiveDelayTimeSpan(globalConfig.SmartSettings)
+            : globalConfig.SmartSettings.GetAutoWatcherDelayTimeSpan();
+    }
+
+    private static string GetDelayDisplayForFolder(string folderPath, AppConfiguration globalConfig)
+    {
+        WatchedFolderProfile? profile = globalConfig.FindWatchedFolder(folderPath);
+        return profile is not null && profile.UseCustomDelay
+            ? profile.GetEffectiveDelayDisplayText(globalConfig.SmartSettings)
+            : globalConfig.SmartSettings.GetAutoWatcherDelayDisplayText();
+    }
+
+    private string GetCurrentDelayDisplay(string folderPath)
     {
         lock (_syncRoot)
         {
-            return _activeConfig?.SmartSettings.GetAutoWatcherDelayDisplayText() ?? "10 giây";
+            return _activeConfig is not null
+                ? GetDelayDisplayForFolder(folderPath, _activeConfig)
+                : "10 giây";
         }
     }
 

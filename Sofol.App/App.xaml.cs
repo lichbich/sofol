@@ -34,6 +34,7 @@ public partial class App : Application
         string[] cmdArgs = Environment.GetCommandLineArgs();
         bool isSetup = false;
         bool isUninstall = false;
+        bool isStartupLaunch = false;
 
         foreach (string arg in cmdArgs)
         {
@@ -45,6 +46,12 @@ public partial class App : Application
             else if (arg.Equals("--uninstall", StringComparison.OrdinalIgnoreCase))
             {
                 isUninstall = true;
+            }
+            else if (arg.Equals(Helpers.InstallationHelper.StartupArgument, StringComparison.OrdinalIgnoreCase) ||
+                     arg.Equals("--minimized", StringComparison.OrdinalIgnoreCase) ||
+                     arg.Equals("--background", StringComparison.OrdinalIgnoreCase))
+            {
+                isStartupLaunch = true;
             }
         }
 
@@ -90,10 +97,21 @@ public partial class App : Application
             return;
         }
 
-        _window = new MainWindow();
-        MainWindowInstance = _window;
+        Helpers.InstallationHelper.EnsureStartupEntryUsesFlag();
+
+        var mainWindow = new MainWindow();
+        _window = mainWindow;
+        MainWindowInstance = mainWindow;
         ApplyTheme(ViewModel.SelectedThemeIndex);
-        _window.Activate();
+
+        if (isStartupLaunch && !ViewModel.ShowWindowOnWindowsStartup)
+        {
+            mainWindow.StartHiddenInTray();
+        }
+        else
+        {
+            mainWindow.Activate();
+        }
     }
 
     public static void ApplyTheme(int themeIndex)

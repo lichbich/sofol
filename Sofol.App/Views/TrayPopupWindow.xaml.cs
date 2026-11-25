@@ -5,6 +5,7 @@ using Microsoft.UI;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Animation;
 using Sofol.App.ViewModels;
@@ -463,12 +464,39 @@ public sealed partial class TrayPopupWindow : Window
         bool willShow = QuickRulePanel.Visibility != Visibility.Visible;
         QuickRulePanel.Visibility = willShow ? Visibility.Visible : Visibility.Collapsed;
         QuickRuleErrorText.Visibility = Visibility.Collapsed;
+
+        if (willShow)
+        {
+            PopulateQuickRuleScopes();
+        }
+
         ResizeAndPositionPopup();
 
         if (willShow)
         {
             QuickRuleNameBox.Focus(FocusState.Programmatic);
         }
+    }
+
+    private void PopulateQuickRuleScopes()
+    {
+        QuickRuleScopeCombo.Items.Clear();
+        QuickRuleScopeCombo.Items.Add(new ComboBoxItem
+        {
+            Content = "Tất cả thư mục (Quy tắc chung)",
+            Tag = null
+        });
+
+        foreach (WatchedFolderItemViewModel folder in ViewModel.WatchedFolderItems)
+        {
+            QuickRuleScopeCombo.Items.Add(new ComboBoxItem
+            {
+                Content = $"Riêng thư mục: {folder.DisplayName}",
+                Tag = folder.FolderPath
+            });
+        }
+
+        QuickRuleScopeCombo.SelectedIndex = 0;
     }
 
     private void OnCancelQuickRuleClick(object sender, RoutedEventArgs e)
@@ -515,11 +543,15 @@ public sealed partial class TrayPopupWindow : Window
             IsEnabled = true
         };
 
-        ViewModel.SaveRuleChanges(rule, isNew: true);
+        string? targetScopeFolder = (QuickRuleScopeCombo.SelectedItem as ComboBoxItem)?.Tag as string;
+        ViewModel.SaveQuickRuleToScope(rule, targetScopeFolder);
         QuickRulePanel.Visibility = Visibility.Collapsed;
         QuickRuleErrorText.Visibility = Visibility.Collapsed;
         ClearQuickRuleInputs();
-        ShowFeedback($"Đã thêm quy tắc \"{rule.Name}\" → {rule.TargetFolderName}.");
+        string scopeDesc = string.IsNullOrWhiteSpace(targetScopeFolder)
+            ? "Quy tắc chung"
+            : System.IO.Path.GetFileName(targetScopeFolder);
+        ShowFeedback($"Đã thêm quy tắc \"{rule.Name}\" → {rule.TargetFolderName} ({scopeDesc}).");
     }
 
     private void ShowQuickRuleError(string error)

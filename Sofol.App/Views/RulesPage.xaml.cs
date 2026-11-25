@@ -17,6 +17,9 @@ public sealed partial class RulesPage : Page
         InitializeComponent();
     }
 
+    private void OnBreadcrumbWorkspaceClick(object sender, RoutedEventArgs e) =>
+        ViewModel.NavigateBackToWorkspace();
+
     private void OnRestoreDefaultsClick(object sender, RoutedEventArgs e)
     {
         ViewModel.RestoreDefaultRules();
@@ -46,10 +49,10 @@ public sealed partial class RulesPage : Page
             IsEnabled = true
         };
 
-        OrganizationRule? edited = await ShowRuleEditorDialogAsync(newRule, isNew: true);
+        var (edited, applyToAll) = await ShowRuleEditorDialogAsync(newRule, isNew: true);
         if (edited is not null)
         {
-            ViewModel.SaveRuleChanges(edited, isNew: true);
+            ViewModel.SaveRuleChanges(edited, isNew: true, applyToAll);
         }
     }
 
@@ -57,7 +60,7 @@ public sealed partial class RulesPage : Page
     {
         if (sender is FrameworkElement fe && fe.Tag is OrganizationRule rule)
         {
-            OrganizationRule? edited = await ShowRuleEditorDialogAsync(rule, isNew: false);
+            var (edited, _) = await ShowRuleEditorDialogAsync(rule, isNew: false);
             if (edited is not null)
             {
                 ViewModel.SaveRuleChanges(edited, isNew: false);
@@ -84,7 +87,7 @@ public sealed partial class RulesPage : Page
         }
     }
 
-    private async Task<OrganizationRule?> ShowRuleEditorDialogAsync(OrganizationRule source, bool isNew)
+    private async Task<(OrganizationRule? Rule, bool ApplyToAll)> ShowRuleEditorDialogAsync(OrganizationRule source, bool isNew)
     {
         var nameBox = new TextBox
         {
@@ -185,10 +188,21 @@ public sealed partial class RulesPage : Page
         panel.Children.Add(priorityBox);
         panel.Children.Add(iconCombo);
 
+        CheckBox? applyAllCheck = null;
+        if (isNew && ViewModel.WatchedFolderItems.Count > 1)
+        {
+            applyAllCheck = new CheckBox
+            {
+                Content = "Áp dụng quy tắc này cho tất cả các thư mục đang theo dõi",
+                IsChecked = false
+            };
+            panel.Children.Add(applyAllCheck);
+        }
+
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot,
-            Title = isNew ? "Thêm quy tắc mới" : $"Chỉnh sửa: {source.Name}",
+            Title = isNew ? $"Thêm quy tắc cho \"{ViewModel.SelectedRuleTabFolderName}\"" : $"Chỉnh sửa: {source.Name}",
             PrimaryButtonText = "Lưu quy tắc",
             CloseButtonText = "Hủy",
             DefaultButton = ContentDialogButton.Primary,
@@ -198,14 +212,14 @@ public sealed partial class RulesPage : Page
         ContentDialogResult res = await dialog.ShowAsync();
         if (res != ContentDialogResult.Primary)
         {
-            return null;
+            return (null, false);
         }
 
         string chosenGlyph = iconCombo.SelectedIndex >= 0
             ? iconChoices[iconCombo.SelectedIndex].Glyph
             : source.IconGlyph;
 
-        return new OrganizationRule
+        var resultRule = new OrganizationRule
         {
             Id = source.Id,
             Name = string.IsNullOrWhiteSpace(nameBox.Text) ? "Quy tắc tùy chỉnh" : nameBox.Text.Trim(),
@@ -216,5 +230,7 @@ public sealed partial class RulesPage : Page
             IconGlyph = chosenGlyph,
             IsEnabled = source.IsEnabled
         };
+
+        return (resultRule, applyAllCheck?.IsChecked == true);
     }
 }

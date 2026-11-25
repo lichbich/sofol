@@ -105,6 +105,18 @@ public sealed class OrganizationRule : INotifyPropertyChanged
         ? "(Không có từ khóa)"
         : string.Join(", ", Keywords);
 
+    public OrganizationRule Clone() => new()
+    {
+        Id = Id,
+        Name = Name,
+        IconGlyph = IconGlyph,
+        TargetFolderName = TargetFolderName,
+        Extensions = [.. Extensions],
+        Keywords = [.. Keywords],
+        Priority = Priority,
+        IsEnabled = IsEnabled
+    };
+
     private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string? propertyName = null)
     {
         if (EqualityComparer<T>.Default.Equals(storage, value))

@@ -1,5 +1,5 @@
 #define MyAppName "Sofol"
-#define MyAppVersion "1.1.1"
+#define MyAppVersion "1.2.1"
 #define MyAppPublisher "Sofol"
 #define MyAppURL "https://github.com/lichbich/sofol"
 #define MyAppExeName "Sofol.App.exe"
@@ -38,7 +38,7 @@ Name: "{userprograms}\Sofol"; Filename: "{app}\{#MyAppExeName}"; Tasks: startmen
 Name: "{autodesktop}\Sofol"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; IconFilename: "{app}\Assets\AppLogo.ico"
 
 [Registry]
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Sofol"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue; Tasks: startup
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Sofol"; ValueData: """{app}\{#MyAppExeName}"" --startup"; Flags: uninsdeletevalue; Tasks: startup
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

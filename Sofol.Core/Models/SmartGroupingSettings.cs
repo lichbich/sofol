@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Sofol.Core.Models;
 
@@ -63,6 +64,8 @@ public sealed class SmartGroupingSettings
 
     public bool EnableDateSubfolders { get; set; } = false;
 
+    public bool EnableDirectDateGrouping { get; set; } = false;
+
     public bool EnableLargeFileIsolation { get; set; } = false;
 
     public long LargeFileThresholdMB { get; set; } = 500;
@@ -87,10 +90,42 @@ public sealed class SmartGroupingSettings
 
     public AppThemePreference AppTheme { get; set; } = AppThemePreference.System;
 
-    public TimeSpan GetAutoWatcherDelayTimeSpan()
+    public bool ShowWindowOnWindowsStartup { get; set; } = false;
+
+    public SmartGroupingSettings Clone() => new()
     {
-        int value = Math.Max(1, AutoWatcherDelayValue);
-        return AutoWatcherDelayUnit switch
+        EnableExtensionRules = EnableExtensionRules,
+        EnableKeywordRules = EnableKeywordRules,
+        EnablePrefixSimilarityGrouping = EnablePrefixSimilarityGrouping,
+        MinFilesForPrefixGroup = MinFilesForPrefixGroup,
+        SimilarityThreshold = SimilarityThreshold,
+        GroupPrefixInsideCategory = GroupPrefixInsideCategory,
+        PrefixGroupLocation = PrefixGroupLocation,
+        PrefixGroupRootFolderName = PrefixGroupRootFolderName,
+        EnableDateSubfolders = EnableDateSubfolders,
+        EnableDirectDateGrouping = EnableDirectDateGrouping,
+        EnableLargeFileIsolation = EnableLargeFileIsolation,
+        LargeFileThresholdMB = LargeFileThresholdMB,
+        LargeFilesFolderName = LargeFilesFolderName,
+        MoveUnmatchedToOthers = MoveUnmatchedToOthers,
+        OthersFolderName = OthersFolderName,
+        ConflictBehavior = ConflictBehavior,
+        IgnoreSubfolders = IgnoreSubfolders,
+        EnableAutoWatcher = EnableAutoWatcher,
+        AutoWatcherDelaySeconds = AutoWatcherDelaySeconds,
+        AutoWatcherDelayValue = AutoWatcherDelayValue,
+        AutoWatcherDelayUnit = AutoWatcherDelayUnit,
+        AppTheme = AppTheme,
+        ShowWindowOnWindowsStartup = ShowWindowOnWindowsStartup
+    };
+
+    public TimeSpan GetAutoWatcherDelayTimeSpan() =>
+        ComputeDelayTimeSpan(AutoWatcherDelayValue, AutoWatcherDelayUnit);
+
+    public static TimeSpan ComputeDelayTimeSpan(int rawValue, WatcherDelayUnit unit)
+    {
+        int value = Math.Max(1, rawValue);
+        return unit switch
         {
             WatcherDelayUnit.Minutes => TimeSpan.FromMinutes(value),
             WatcherDelayUnit.Hours => TimeSpan.FromHours(value),
@@ -123,7 +158,7 @@ public sealed class SmartGroupingSettings
 /// </summary>
 public sealed class AppConfiguration
 {
-    public const int CurrentConfigSchemaVersion = 4;
+    public const int CurrentConfigSchemaVersion = 6;
 
     public int ConfigSchemaVersion { get; set; } = 1;
 
@@ -133,7 +168,44 @@ public sealed class AppConfiguration
 
     public List<OrganizationRule> Rules { get; set; } = [];
 
+    public List<WatchedFolderProfile> WatchedFolders { get; set; } = [];
+
     public string GitHubRepository { get; set; } = "lichbich/sofol";
 
     public bool AutoCheckUpdatesOnStartup { get; set; } = true;
+
+    public WatchedFolderProfile? FindWatchedFolder(string? folderPath)
+    {
+        string normalized = WatchedFolderProfile.NormalizePath(folderPath);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return null;
+        }
+
+        return WatchedFolders.FirstOrDefault(f =>
+            string.Equals(
+                WatchedFolderProfile.NormalizePath(f.FolderPath),
+                normalized,
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    public AppConfiguration BuildEffectiveConfigurationForFolder(string? folderPath)
+    {
+        WatchedFolderProfile? profile = FindWatchedFolder(folderPath);
+        if (profile?.CustomSmartSettings is null)
+        {
+            return this;
+        }
+
+        return new AppConfiguration
+        {
+            ConfigSchemaVersion = ConfigSchemaVersion,
+            LastTargetFolder = profile.FolderPath,
+            SmartSettings = profile.CustomSmartSettings.Clone(),
+            Rules = profile.CustomRules,
+            WatchedFolders = WatchedFolders,
+            GitHubRepository = GitHubRepository,
+            AutoCheckUpdatesOnStartup = AutoCheckUpdatesOnStartup
+        };
+    }
 }

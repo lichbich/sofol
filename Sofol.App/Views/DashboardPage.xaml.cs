@@ -1,10 +1,8 @@
 using System;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
 using Sofol.App.ViewModels;
 using Windows.Storage.Pickers;
-using Windows.System;
 
 namespace Sofol.App.Views;
 
@@ -16,6 +14,9 @@ public sealed partial class DashboardPage : Page
     {
         InitializeComponent();
     }
+
+    private void OnBreadcrumbWorkspaceClick(object sender, RoutedEventArgs e) =>
+        ViewModel.NavigateBackToWorkspace();
 
     private async void OnBrowseFolderClick(object sender, RoutedEventArgs e)
     {
@@ -39,26 +40,6 @@ public sealed partial class DashboardPage : Page
             await ViewModel.SetTargetFolderAndAnalyzeAsync(folder.Path);
         }
     }
-
-    private async void OnFolderPathKeyDown(object sender, KeyRoutedEventArgs e)
-    {
-        if (e.Key == VirtualKey.Enter)
-        {
-            await ViewModel.SetTargetFolderAndAnalyzeAsync(FolderPathTextBox.Text);
-        }
-    }
-
-    private async void OnQuickDownloadsClick(object sender, RoutedEventArgs e) =>
-        await ViewModel.SelectSpecialFolderAsync(Environment.SpecialFolder.UserProfile);
-
-    private async void OnQuickDesktopClick(object sender, RoutedEventArgs e) =>
-        await ViewModel.SelectSpecialFolderAsync(Environment.SpecialFolder.DesktopDirectory);
-
-    private async void OnQuickDocumentsClick(object sender, RoutedEventArgs e) =>
-        await ViewModel.SelectSpecialFolderAsync(Environment.SpecialFolder.MyDocuments);
-
-    private async void OnCreateDemoSandboxClick(object sender, RoutedEventArgs e) =>
-        await ViewModel.CreateDemoSandboxAsync();
 
     private void OnOpenFolderClick(object sender, RoutedEventArgs e) =>
         ViewModel.OpenTargetFolderInExplorer();

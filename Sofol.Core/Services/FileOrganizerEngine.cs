@@ -244,6 +244,13 @@ public sealed class FileOrganizerEngine
                 finalIcon = "\uE8A5";
                 finalBadge = RuleBadgeType.Others;
             }
+            else if (settings.EnableDirectDateGrouping)
+            {
+                targetRelativeFolder = file.LastWriteTime.ToString("yyyy-MM");
+                finalMatchedRule = $"Theo Năm-Tháng ({targetRelativeFolder})";
+                finalIcon = "\uE787";
+                finalBadge = RuleBadgeType.Extension;
+            }
             else
             {
                 return new FileMovePlanItem

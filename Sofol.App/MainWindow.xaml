@@ -9,7 +9,7 @@
         <MicaBackdrop Kind="BaseAlt" />
     </Window.SystemBackdrop>
 
-    <Grid>
+    <Grid x:Name="WindowRootGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="44" />
             <RowDefinition Height="*" />
@@ -41,24 +41,35 @@
             x:Name="NavView"
             Grid.Row="1"
             IsBackButtonVisible="Collapsed"
+            IsPaneToggleButtonVisible="True"
             IsSettingsVisible="False"
             ItemInvoked="OnNavItemInvoked"
             OpenPaneLength="235"
             PaneDisplayMode="Left"
             SelectionChanged="OnNavSelectionChanged">
 
+            <NavigationView.PaneHeader>
+                <Button
+                    x:Name="InlineBackButton"
+                    Width="40"
+                    Height="36"
+                    Margin="0,2,0,2"
+                    Padding="0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    AutomationProperties.Name="Quay lại"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    Click="OnInlineBackClick"
+                    CornerRadius="6"
+                    IsEnabled="False"
+                    ToolTipService.ToolTip="Quay lại (Nút Back trên chuột hoặc Alt + Trái)">
+                    <FontIcon FontSize="15" Glyph="&#xE72B;" />
+                </Button>
+            </NavigationView.PaneHeader>
+
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="Dọn dẹp &amp; Xem trước" Tag="dashboard">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE80F;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem Content="Thiết lập Quy tắc" Tag="rules">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE71C;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem Content="Tự động sắp xếp" Tag="watcher">
+                <NavigationViewItem Content="Không gian dọn dẹp" Tag="watcher">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE7C4;" />
                     </NavigationViewItem.Icon>
@@ -68,6 +79,8 @@
                         <FontIcon Glyph="&#xE81C;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+                <NavigationViewItemSeparator x:Name="WatchedFoldersSeparator" Visibility="Collapsed" />
+                <NavigationViewItemHeader x:Name="WatchedFoldersHeader" Content="Thư mục theo dõi" Visibility="Collapsed" />
             </NavigationView.MenuItems>
 
             <NavigationView.FooterMenuItems>
@@ -76,14 +89,39 @@
                         <FontIcon Glyph="&#xE897;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Cài đặt" Tag="settings">
+                <NavigationViewItem x:Name="SettingsNavItem" Content="Cài đặt" Tag="settings">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE713;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
 
-            <Frame x:Name="ContentFrame" />
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <InfoBar
+                    x:Name="GlobalUpdateBanner"
+                    Grid.Row="0"
+                    Margin="28,12,28,0"
+                    Closed="OnGlobalUpdateBannerClosed"
+                    IsClosable="True"
+                    IsOpen="False"
+                    Severity="Informational"
+                    Title="Đã có bản cập nhật mới"
+                    Visibility="Collapsed">
+                    <InfoBar.ActionButton>
+                        <Button
+                            Click="OnOpenUpdateSettingsClick"
+                            Content="Xem &amp; Cập nhật"
+                            Style="{StaticResource AccentButtonStyle}" />
+                    </InfoBar.ActionButton>
+                </InfoBar>
+
+                <Frame x:Name="ContentFrame" Grid.Row="1" />
+            </Grid>
         </NavigationView>
     </Grid>
 </Window>

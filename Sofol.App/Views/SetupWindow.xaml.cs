@@ -59,6 +59,7 @@ public sealed partial class SetupWindow : Window
 
     private void InitializeView()
     {
+        VersionBadgeText.Text = $"v{InstallationHelper.AppVersion}";
         if (_isUninstallMode)
         {
             Title = "Gỡ cài đặt Sofol";

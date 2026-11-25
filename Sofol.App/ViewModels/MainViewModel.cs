@@ -33,6 +33,7 @@ public sealed partial class MainViewModel : ObservableObject
     private DispatcherQueue? _dispatcher;
     private AppConfiguration _config;
     private bool _isInitializing;
+    private string? _selectedScopeFolderPath;
 
     public MainViewModel()
     {
@@ -44,12 +45,16 @@ public sealed partial class MainViewModel : ObservableObject
         _watcher.LogAdded += OnWatcherLogAdded;
         _watcher.SessionCompleted += OnWatcherSessionCompleted;
         _watcher.StateChanged += OnWatcherStateChanged;
+        _watcher.PendingCountsChanged += () => RunOnUi(RefreshWatchedFolderItemsDisplay);
 
         SyncFieldsFromConfig();
         ReloadHistoryCollection();
     }
 
     public string StorageDirectory => _store.StorageDirectory;
+
+    public IReadOnlyList<string> DelayPresetLabels { get; } =
+        WatchedFolderProfile.DelayPresets.Select(p => p.DisplayText).ToList();
 
     public ObservableCollection<PlanItemViewModel> AllPreviewItems { get; } = [];
 
@@ -61,6 +66,10 @@ public sealed partial class MainViewModel : ObservableObject
 
     public ObservableCollection<string> WatcherLogs { get; } = [];
 
+    public ObservableCollection<WatchedFolderItemViewModel> WatchedFolderItems { get; } = [];
+
+    public ObservableCollection<FolderRuleTabViewModel> FolderRuleTabs { get; } = [];
+
     [ObservableProperty]
     private string _targetFolderPath = string.Empty;
 
@@ -70,7 +79,54 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnTargetFolderPathChanged(string value)
     {
         UpdateTargetFolderDisplayName(value);
+        UpdateDashboardFolderRuleState();
     }
+
+    [ObservableProperty]
+    private bool _hasNoWatchedFolders = true;
+
+    [ObservableProperty]
+    private bool _isTargetFolderWatched;
+
+    [ObservableProperty]
+    private bool _canPinTargetFolderToWatcher;
+
+    [ObservableProperty]
+    private string _selectedRuleTabFolderName = "Mặc định";
+
+    [ObservableProperty]
+    private string _selectedRuleTabFolderPath = string.Empty;
+
+    [ObservableProperty]
+    private string _targetFolderRuleButtonText = "Quy tắc";
+
+    [ObservableProperty]
+    private bool _isSmartGroupingAdvancedOpen;
+
+    [RelayCommand]
+    private void ToggleSmartGroupingAdvanced()
+    {
+        IsSmartGroupingAdvancedOpen = !IsSmartGroupingAdvancedOpen;
+    }
+
+    [ObservableProperty]
+    private bool _enableFolderMonthGrouping;
+
+    partial void OnEnableFolderMonthGroupingChanged(bool value)
+    {
+        if (_isInitializing) return;
+        SmartGroupingSettings s = GetEditableRuleSmartSettings();
+        s.EnableDateSubfolders = value;
+        s.EnableDirectDateGrouping = value;
+        SaveConfigAndReanalyze();
+        RefreshWatchedFolderItemsDisplay();
+    }
+
+    [ObservableProperty]
+    private string _trayFolderTitle = "Chưa chọn thư mục";
+
+    [ObservableProperty]
+    private string _trayFolderSubtitle = "Hãy thêm thư mục theo dõi";
 
     [ObservableProperty]
     private string _searchQuery = string.Empty;
@@ -139,14 +195,14 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _latestUndoSummary = string.Empty;
 
-    // Thiết lập đồng bộ với AppConfiguration
+    // Thiết lập quy tắc cho tab thư mục đang chọn
     [ObservableProperty]
     private bool _enablePrefixSimilarityGrouping;
 
     partial void OnEnablePrefixSimilarityGroupingChanged(bool value)
     {
         if (_isInitializing) return;
-        _config.SmartSettings.EnablePrefixSimilarityGrouping = value;
+        GetEditableRuleSmartSettings().EnablePrefixSimilarityGrouping = value;
         SaveConfigAndReanalyze();
     }
 
@@ -156,7 +212,7 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnEnableExtensionRulesChanged(bool value)
     {
         if (_isInitializing) return;
-        _config.SmartSettings.EnableExtensionRules = value;
+        GetEditableRuleSmartSettings().EnableExtensionRules = value;
         SaveConfigAndReanalyze();
     }
 
@@ -166,7 +222,7 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnEnableKeywordRulesChanged(bool value)
     {
         if (_isInitializing) return;
-        _config.SmartSettings.EnableKeywordRules = value;
+        GetEditableRuleSmartSettings().EnableKeywordRules = value;
         SaveConfigAndReanalyze();
     }
 
@@ -176,7 +232,7 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnMinFilesForPrefixGroupChanged(double value)
     {
         if (_isInitializing) return;
-        _config.SmartSettings.MinFilesForPrefixGroup = Math.Clamp((int)value, 2, 20);
+        GetEditableRuleSmartSettings().MinFilesForPrefixGroup = Math.Clamp((int)value, 2, 20);
         SaveConfigAndReanalyze();
     }
 
@@ -186,7 +242,7 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnSimilarityThresholdPercentChanged(double value)
     {
         if (_isInitializing) return;
-        _config.SmartSettings.SimilarityThreshold = Math.Clamp(value / 100.0, 0.50, 0.98);
+        GetEditableRuleSmartSettings().SimilarityThreshold = Math.Clamp(value / 100.0, 0.50, 0.98);
         SaveConfigAndReanalyze();
     }
 
@@ -196,7 +252,7 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnGroupPrefixInsideCategoryChanged(bool value)
     {
         if (_isInitializing) return;
-        _config.SmartSettings.GroupPrefixInsideCategory = value;
+        GetEditableRuleSmartSettings().GroupPrefixInsideCategory = value;
         SaveConfigAndReanalyze();
     }
 
@@ -206,7 +262,7 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnUseDedicatedSmartRootFolderChanged(bool value)
     {
         if (_isInitializing) return;
-        _config.SmartSettings.PrefixGroupLocation = value
+        GetEditableRuleSmartSettings().PrefixGroupLocation = value
             ? PrefixGroupLocationMode.DedicatedRootSubfolder
             : PrefixGroupLocationMode.DirectSubfolder;
         SaveConfigAndReanalyze();
@@ -218,10 +274,11 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnPrefixGroupRootFolderNameChanged(string value)
     {
         if (_isInitializing) return;
-        _config.SmartSettings.PrefixGroupRootFolderName = string.IsNullOrWhiteSpace(value) ? "Gom theo tên" : value.Trim();
+        GetEditableRuleSmartSettings().PrefixGroupRootFolderName = string.IsNullOrWhiteSpace(value) ? "Gom theo tên" : value.Trim();
         SaveConfigAndReanalyze();
     }
 
+    // Thiết lập chung toàn ứng dụng (SettingsPage)
     [ObservableProperty]
     private bool _enableDateSubfolders;
 
@@ -279,6 +336,13 @@ public sealed partial class MainViewModel : ObservableObject
     {
         if (_isInitializing) return;
         _config.SmartSettings.ConflictBehavior = (ConflictResolutionMode)Math.Clamp(value, 0, 2);
+        foreach (WatchedFolderProfile profile in _config.WatchedFolders)
+        {
+            if (profile.CustomSmartSettings is not null)
+            {
+                profile.CustomSmartSettings.ConflictBehavior = _config.SmartSettings.ConflictBehavior;
+            }
+        }
         SaveConfigurationOnly();
     }
 
@@ -309,7 +373,7 @@ public sealed partial class MainViewModel : ObservableObject
 
     partial void OnSelectedWatcherDelayUnitIndexChanged(int value)
     {
-        if (_isInitializing) return;
+        if (_isInitializing || value < 0) return;
         _config.SmartSettings.AutoWatcherDelayUnit = (WatcherDelayUnit)Math.Clamp(value, 0, 5);
         _config.SmartSettings.AutoWatcherDelaySeconds = (int)Math.Clamp(
             _config.SmartSettings.GetAutoWatcherDelayTimeSpan().TotalSeconds,
@@ -318,12 +382,6 @@ public sealed partial class MainViewModel : ObservableObject
         SaveConfigurationOnly();
         UpdateWatcherDisplayProperties();
     }
-
-    [ObservableProperty]
-    private string _watcherDelayUnitSuffixText = "giây";
-
-    [ObservableProperty]
-    private string _watcherDelaySummaryText = "Đang áp dụng: Chờ 10 giây sau khi phát hiện tệp mới";
 
     [ObservableProperty]
     private bool _isWatcherRunning;
@@ -338,29 +396,45 @@ public sealed partial class MainViewModel : ObservableObject
     private string _watcherBadgeText = "○ ĐANG TẠM DỪNG";
 
     [ObservableProperty]
-    private string _watcherActionButtonText = "Bật tự động sắp xếp";
-
-    [ObservableProperty]
-    private string _watcherActionButtonGlyph = "\uE768";
-
-    [ObservableProperty]
     private string _watcherCompactBadgeText = "○ Đang tạm dừng";
 
     [ObservableProperty]
-    private string _watcherCompactDelayText = "Chờ 10 giây sau khi có tệp mới";
+    private string _watcherCompactDelayText = "Theo dõi tự động theo lịch từng thư mục";
 
     [ObservableProperty]
     private string _watcherCompactActionText = "Bật tự động";
+
+    [ObservableProperty]
+    private string _watcherActionButtonGlyph = "\uE768";
 
     [ObservableProperty]
     private int _selectedThemeIndex;
 
     partial void OnSelectedThemeIndexChanged(int value)
     {
-        if (_isInitializing) return;
+        if (_isInitializing || value < 0) return;
         _config.SmartSettings.AppTheme = (AppThemePreference)Math.Clamp(value, 0, 2);
         SaveConfigurationOnly();
         App.ApplyTheme(value);
+    }
+
+    [ObservableProperty]
+    private bool _runAtWindowsStartup;
+
+    partial void OnRunAtWindowsStartupChanged(bool value)
+    {
+        if (_isInitializing) return;
+        InstallationHelper.SetRunAtStartup(value);
+    }
+
+    [ObservableProperty]
+    private bool _showWindowOnWindowsStartup;
+
+    partial void OnShowWindowOnWindowsStartupChanged(bool value)
+    {
+        if (_isInitializing) return;
+        _config.SmartSettings.ShowWindowOnWindowsStartup = value;
+        SaveConfigurationOnly();
     }
 
     // Cập nhật ứng dụng từ GitHub Releases
@@ -418,6 +492,15 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _hasUpdateAvailable;
 
+    [ObservableProperty]
+    private string _currentVersionBadgeText = $"v{InstallationHelper.AppVersion} (Bản mới nhất)";
+
+    [ObservableProperty]
+    private bool _isGlobalUpdateBannerOpen;
+
+    [ObservableProperty]
+    private string _globalUpdateBannerText = string.Empty;
+
     public async Task CheckForUpdatesAsync(bool silent = false)
     {
         if (IsCheckingForUpdate || IsDownloadingUpdate)
@@ -453,6 +536,9 @@ public sealed partial class MainViewModel : ObservableObject
             else if (info.HasUpdate)
             {
                 HasUpdateAvailable = true;
+                CurrentVersionBadgeText = $"v{CurrentAppVersion} (Có bản mới v{info.LatestVersion})";
+                GlobalUpdateBannerText = $"Đã có phiên bản Sofol v{info.LatestVersion} mới sẵn sàng cập nhật.";
+                IsGlobalUpdateBannerOpen = true;
                 IsUpdateInfoBarOpen = true;
                 UpdateInfoBarSeverity = InfoBarSeverity.Success;
                 UpdateInfoBarTitle = $"Đã có phiên bản mới v{info.LatestVersion}!";
@@ -463,6 +549,8 @@ public sealed partial class MainViewModel : ObservableObject
             else
             {
                 HasUpdateAvailable = false;
+                IsGlobalUpdateBannerOpen = false;
+                CurrentVersionBadgeText = $"v{CurrentAppVersion} (Bản mới nhất)";
                 if (!silent)
                 {
                     IsUpdateInfoBarOpen = true;
@@ -532,22 +620,29 @@ public sealed partial class MainViewModel : ObservableObject
         if (!string.IsNullOrWhiteSpace(TargetFolderPath) && Directory.Exists(TargetFolderPath))
         {
             await AnalyzeFolderAsync();
-            if (_config.SmartSettings.EnableAutoWatcher && !_watcher.IsRunning)
-            {
-                _watcher.Start(TargetFolderPath, _config);
-            }
-        }
-        else if (_config.SmartSettings.EnableAutoWatcher)
-        {
-            _config.SmartSettings.EnableAutoWatcher = false;
-            SaveConfigurationOnly();
         }
 
+        if (_config.SmartSettings.EnableAutoWatcher && !_watcher.IsRunning)
+        {
+            bool hasValidWatched = _config.WatchedFolders.Any(f => f.IsEnabled && Directory.Exists(f.FolderPath));
+            if (hasValidWatched)
+            {
+                _watcher.StartConfiguredFolders(_config);
+            }
+            else
+            {
+                _config.SmartSettings.EnableAutoWatcher = false;
+                SaveConfigurationOnly();
+            }
+        }
+
+        RefreshWatchedFolderItemsDisplay();
         UpdateWatcherDisplayProperties();
+        UpdateDashboardFolderRuleState();
 
         if (AutoCheckUpdatesOnStartup)
         {
-            _ = Task.Run(() => CheckForUpdatesAsync(silent: true));
+            _ = CheckForUpdatesAsync(silent: true);
         }
     }
 
@@ -561,15 +656,8 @@ public sealed partial class MainViewModel : ObservableObject
                 ? "lichbich/sofol"
                 : _config.GitHubRepository;
             AutoCheckUpdatesOnStartup = _config.AutoCheckUpdatesOnStartup;
+
             SmartGroupingSettings s = _config.SmartSettings;
-            EnablePrefixSimilarityGrouping = s.EnablePrefixSimilarityGrouping;
-            EnableExtensionRules = s.EnableExtensionRules;
-            EnableKeywordRules = s.EnableKeywordRules;
-            MinFilesForPrefixGroup = s.MinFilesForPrefixGroup;
-            SimilarityThresholdPercent = Math.Round(s.SimilarityThreshold * 100.0);
-            GroupPrefixInsideCategory = s.GroupPrefixInsideCategory;
-            UseDedicatedSmartRootFolder = s.PrefixGroupLocation == PrefixGroupLocationMode.DedicatedRootSubfolder;
-            PrefixGroupRootFolderName = s.PrefixGroupRootFolderName;
             EnableDateSubfolders = s.EnableDateSubfolders;
             EnableLargeFileIsolation = s.EnableLargeFileIsolation;
             LargeFileThresholdMB = s.LargeFileThresholdMB;
@@ -579,8 +667,12 @@ public sealed partial class MainViewModel : ObservableObject
             AutoWatcherDelayValue = Math.Max(1, s.AutoWatcherDelayValue);
             SelectedWatcherDelayUnitIndex = (int)s.AutoWatcherDelayUnit;
             SelectedThemeIndex = (int)s.AppTheme;
+            RunAtWindowsStartup = InstallationHelper.IsRunAtStartupEnabled();
+            ShowWindowOnWindowsStartup = s.ShowWindowOnWindowsStartup;
 
-            ReloadRulesCollection();
+            RebuildWatchedFolderItems();
+            RebuildFolderRuleTabs();
+            SyncRuleEditorFieldsFromActiveTabCore();
         }
         finally
         {
@@ -588,13 +680,191 @@ public sealed partial class MainViewModel : ObservableObject
         }
 
         UpdateTargetFolderDisplayName(TargetFolderPath);
+        UpdateDashboardFolderRuleState();
         UpdateWatcherDisplayProperties();
     }
 
-    private void ReloadRulesCollection()
+    private void RebuildWatchedFolderItems()
     {
+        WatchedFolderItems.Clear();
+        foreach (WatchedFolderProfile profile in _config.WatchedFolders)
+        {
+            var vm = new WatchedFolderItemViewModel(profile, HandleWatchedFolderItemChanged);
+            vm.SyncFromModel(_config, _watcher.IsRunning, _watcher.GetPendingCount(profile.FolderPath));
+            WatchedFolderItems.Add(vm);
+        }
+
+        HasNoWatchedFolders = WatchedFolderItems.Count == 0;
+    }
+
+    private void RefreshWatchedFolderItemsDisplay()
+    {
+        foreach (WatchedFolderItemViewModel vm in WatchedFolderItems)
+        {
+            vm.SyncFromModel(_config, _watcher.IsRunning, _watcher.GetPendingCount(vm.FolderPath));
+        }
+
+        RefreshFolderRuleTabBadges();
+        HasNoWatchedFolders = WatchedFolderItems.Count == 0;
+        UpdateWatcherDisplayProperties();
+        UpdateDashboardFolderRuleState();
+    }
+
+    private void RebuildFolderRuleTabs()
+    {
+        FolderRuleTabs.Clear();
+
+        if (_config.WatchedFolders.Count == 0)
+        {
+            _selectedScopeFolderPath = null;
+            FolderRuleTabs.Add(new FolderRuleTabViewModel
+            {
+                FolderPath = null,
+                DisplayName = "Mặc định",
+                IconGlyph = "\uE8B7",
+                ActiveRuleCountText = _config.Rules.Count(r => r.IsEnabled).ToString(),
+                IsSelected = true
+            });
+            return;
+        }
+
+        bool foundSelected = !string.IsNullOrWhiteSpace(_selectedScopeFolderPath) &&
+                             _config.WatchedFolders.Any(f => IsSameFolder(f.FolderPath, _selectedScopeFolderPath));
+        if (!foundSelected)
+        {
+            _selectedScopeFolderPath = _config.WatchedFolders[0].FolderPath;
+        }
+
+        foreach (WatchedFolderProfile profile in _config.WatchedFolders)
+        {
+            int activeCount = (profile.CustomRules.Count > 0 ? profile.CustomRules : _config.Rules).Count(r => r.IsEnabled);
+            FolderRuleTabs.Add(new FolderRuleTabViewModel
+            {
+                FolderPath = profile.FolderPath,
+                DisplayName = profile.GetDisplayName(),
+                IconGlyph = profile.GetIconGlyph(),
+                ActiveRuleCountText = activeCount.ToString(),
+                IsSelected = IsSameFolder(profile.FolderPath, _selectedScopeFolderPath)
+            });
+        }
+    }
+
+    private void RefreshFolderRuleTabBadges()
+    {
+        foreach (FolderRuleTabViewModel tab in FolderRuleTabs)
+        {
+            if (string.IsNullOrWhiteSpace(tab.FolderPath))
+            {
+                tab.ActiveRuleCountText = _config.Rules.Count(r => r.IsEnabled).ToString();
+            }
+            else
+            {
+                WatchedFolderProfile? profile = _config.FindWatchedFolder(tab.FolderPath);
+                if (profile is not null)
+                {
+                    int activeCount = (profile.CustomRules.Count > 0 ? profile.CustomRules : _config.Rules).Count(r => r.IsEnabled);
+                    tab.ActiveRuleCountText = activeCount.ToString();
+                }
+            }
+        }
+    }
+
+    public void SelectRuleTab(FolderRuleTabViewModel? tab)
+    {
+        if (tab is null)
+        {
+            return;
+        }
+
+        _selectedScopeFolderPath = tab.FolderPath;
+        foreach (FolderRuleTabViewModel item in FolderRuleTabs)
+        {
+            item.IsSelected = ReferenceEquals(item, tab);
+        }
+
+        SyncRuleEditorFieldsFromActiveTab();
+    }
+
+    private WatchedFolderProfile? GetSelectedScopeProfile() =>
+        string.IsNullOrWhiteSpace(_selectedScopeFolderPath)
+            ? null
+            : _config.FindWatchedFolder(_selectedScopeFolderPath);
+
+    private SmartGroupingSettings GetEditableRuleSmartSettings()
+    {
+        WatchedFolderProfile? profile = GetSelectedScopeProfile();
+        if (profile is not null)
+        {
+            profile.EnsureStandaloneInitialized(_config.SmartSettings, _config.Rules);
+            return profile.CustomSmartSettings!;
+        }
+
+        return _config.SmartSettings;
+    }
+
+    private List<OrganizationRule> GetEditableRulesList()
+    {
+        WatchedFolderProfile? profile = GetSelectedScopeProfile();
+        if (profile is not null)
+        {
+            profile.EnsureStandaloneInitialized(_config.SmartSettings, _config.Rules);
+            return profile.CustomRules;
+        }
+
+        return _config.Rules;
+    }
+
+    private void SyncRuleEditorFieldsFromActiveTab()
+    {
+        bool prevInit = _isInitializing;
+        _isInitializing = true;
+        try
+        {
+            SyncRuleEditorFieldsFromActiveTabCore();
+        }
+        finally
+        {
+            _isInitializing = prevInit;
+        }
+    }
+
+    private void SyncRuleEditorFieldsFromActiveTabCore()
+    {
+        WatchedFolderProfile? profile = GetSelectedScopeProfile();
+        if (profile is null)
+        {
+            SelectedRuleTabFolderName = "Mặc định";
+            SelectedRuleTabFolderPath = "Chưa có thư mục theo dõi nào — hãy bấm '+ Thêm thư mục...' để tạo riêng.";
+            ApplySmartSettingsToRuleControls(_config.SmartSettings);
+            ReloadRulesCollection(_config.Rules);
+            return;
+        }
+
+        profile.EnsureStandaloneInitialized(_config.SmartSettings, _config.Rules);
+        SelectedRuleTabFolderName = profile.GetDisplayName();
+        SelectedRuleTabFolderPath = profile.FolderPath;
+        ApplySmartSettingsToRuleControls(profile.CustomSmartSettings!);
+        ReloadRulesCollection(profile.CustomRules);
+    }
+
+    private void ApplySmartSettingsToRuleControls(SmartGroupingSettings s)
+    {
+        EnablePrefixSimilarityGrouping = s.EnablePrefixSimilarityGrouping;
+        EnableExtensionRules = s.EnableExtensionRules;
+        EnableKeywordRules = s.EnableKeywordRules;
+        EnableFolderMonthGrouping = s.EnableDateSubfolders || s.EnableDirectDateGrouping;
+        MinFilesForPrefixGroup = s.MinFilesForPrefixGroup;
+        SimilarityThresholdPercent = Math.Round(s.SimilarityThreshold * 100.0);
+        GroupPrefixInsideCategory = s.GroupPrefixInsideCategory;
+        UseDedicatedSmartRootFolder = s.PrefixGroupLocation == PrefixGroupLocationMode.DedicatedRootSubfolder;
+        PrefixGroupRootFolderName = s.PrefixGroupRootFolderName;
+    }
+
+    private void ReloadRulesCollection(IEnumerable<OrganizationRule>? sourceRules = null)
+    {
+        IEnumerable<OrganizationRule> list = sourceRules ?? GetEditableRulesList();
         Rules.Clear();
-        foreach (OrganizationRule rule in _config.Rules.OrderBy(r => r.Priority))
+        foreach (OrganizationRule rule in list.OrderBy(r => r.Priority))
         {
             Rules.Add(rule);
         }
@@ -616,6 +886,19 @@ public sealed partial class MainViewModel : ObservableObject
             : $"Hoàn tác phiên gần nhất ({latestUndoable.MovedFileCount} tệp lúc {latestUndoable.ExecutedAt.LocalDateTime:HH:mm})";
     }
 
+    private void UpdateDashboardFolderRuleState()
+    {
+        bool hasValidTarget = !string.IsNullOrWhiteSpace(TargetFolderPath) && Directory.Exists(TargetFolderPath);
+        WatchedFolderProfile? profile = _config.FindWatchedFolder(TargetFolderPath);
+
+        IsTargetFolderWatched = profile is not null;
+        CanPinTargetFolderToWatcher = hasValidTarget && profile is null;
+
+        int activeCount = (profile is not null && profile.CustomRules.Count > 0 ? profile.CustomRules : _config.Rules)
+            .Count(r => r.IsEnabled);
+        TargetFolderRuleButtonText = $"Quy tắc ({activeCount})";
+    }
+
     public async Task SetTargetFolderAndAnalyzeAsync(string folderPath)
     {
         if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
@@ -628,15 +911,7 @@ public sealed partial class MainViewModel : ObservableObject
         _config.LastTargetFolder = folderPath;
         SaveConfigurationOnly();
         await AnalyzeFolderAsync();
-
-        if (_watcher.IsRunning && !string.Equals(_watcher.WatchedFolder, folderPath, StringComparison.OrdinalIgnoreCase))
-        {
-            _watcher.Start(folderPath, _config);
-        }
-        else
-        {
-            UpdateWatcherDisplayProperties();
-        }
+        UpdateWatcherDisplayProperties();
     }
 
     [RelayCommand]
@@ -659,6 +934,7 @@ public sealed partial class MainViewModel : ObservableObject
             SkippedOrLockedCount = 0;
             SelectedReadyCount = 0;
             FormattedTotalReadySize = "0 B";
+            UpdateDashboardFolderRuleState();
             return;
         }
 
@@ -670,8 +946,10 @@ public sealed partial class MainViewModel : ObservableObject
         {
             _config.LastTargetFolder = TargetFolderPath;
             SaveConfigurationOnly();
+            UpdateDashboardFolderRuleState();
 
-            FolderAnalysisResult result = await _engine.AnalyzeFolderAsync(TargetFolderPath, _config);
+            AppConfiguration effectiveConfig = _config.BuildEffectiveConfigurationForFolder(TargetFolderPath);
+            FolderAnalysisResult result = await _engine.AnalyzeFolderAsync(TargetFolderPath, effectiveConfig);
 
             AllPreviewItems.Clear();
             foreach (FileMovePlanItem item in result.Items)
@@ -808,10 +1086,11 @@ public sealed partial class MainViewModel : ObservableObject
 
         try
         {
+            AppConfiguration effectiveConfig = _config.BuildEffectiveConfigurationForFolder(TargetFolderPath);
             ExecutionResult exec = await _engine.ExecutePlanAsync(
                 TargetFolderPath,
                 itemsToProcess,
-                _config.SmartSettings.ConflictBehavior,
+                effectiveConfig.SmartSettings.ConflictBehavior,
                 progress);
 
             foreach (PlanItemViewModel vm in AllPreviewItems)
@@ -836,7 +1115,6 @@ public sealed partial class MainViewModel : ObservableObject
                 message,
                 exec.FailedCount > 0 ? InfoBarSeverity.Warning : InfoBarSeverity.Success);
 
-            // Quét lại để cập nhật bảng Preview phản ánh thư mục sau khi dọn
             IsBusy = false;
             await AnalyzeFolderAsync();
         }
@@ -894,7 +1172,7 @@ public sealed partial class MainViewModel : ObservableObject
             }
 
             IsBusy = false;
-            if (string.Equals(session.SourceFolderPath, TargetFolderPath, StringComparison.OrdinalIgnoreCase))
+            if (IsSameFolder(session.SourceFolderPath, TargetFolderPath))
             {
                 await AnalyzeFolderAsync();
             }
@@ -921,6 +1199,15 @@ public sealed partial class MainViewModel : ObservableObject
         await SetTargetFolderAndAnalyzeAsync(demoPath);
     }
 
+    public async Task SelectSpecialFolderAsync(string specialKey)
+    {
+        string? path = ResolveSpecialFolderPath(specialKey);
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            await SetTargetFolderAndAnalyzeAsync(path);
+        }
+    }
+
     public async Task SelectSpecialFolderAsync(Environment.SpecialFolder specialFolder)
     {
         string path = specialFolder == Environment.SpecialFolder.UserProfile
@@ -930,13 +1217,32 @@ public sealed partial class MainViewModel : ObservableObject
         await SetTargetFolderAndAnalyzeAsync(path);
     }
 
+    public static string? ResolveSpecialFolderPath(string key) => key switch
+    {
+        "Downloads" => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads"),
+        "Desktop" => Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+        "Pictures" => Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+        "Videos" => Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
+        "Documents" => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+        "Music" => Environment.GetFolderPath(Environment.SpecialFolder.MyMusic),
+        _ => null
+    };
+
     public void OpenTargetFolderInExplorer()
     {
         if (!string.IsNullOrWhiteSpace(TargetFolderPath) && Directory.Exists(TargetFolderPath))
         {
+            OpenFolderInExplorer(TargetFolderPath);
+        }
+    }
+
+    public static void OpenFolderInExplorer(string folderPath)
+    {
+        if (!string.IsNullOrWhiteSpace(folderPath) && Directory.Exists(folderPath))
+        {
             Process.Start(new ProcessStartInfo
             {
-                FileName = TargetFolderPath,
+                FileName = folderPath,
                 UseShellExecute = true
             });
         }
@@ -952,23 +1258,329 @@ public sealed partial class MainViewModel : ObservableObject
         });
     }
 
-    public void SaveRuleChanges(OrganizationRule rule, bool isNew)
+    // Quản lý nhiều thư mục tự động sắp xếp
+    [RelayCommand]
+    public Task PinTargetFolderToWatcherAsync() => AddWatchedFolderAsync(TargetFolderPath, selectInRulesTab: false);
+
+    [RelayCommand]
+    public void OpenTargetFolderRules() => NavigateToFolderRules(TargetFolderPath);
+
+    public Task AddSpecialWatchedFolderAsync(string key)
     {
-        if (isNew)
+        string? path = ResolveSpecialFolderPath(key);
+        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
         {
-            _config.Rules.Add(rule);
+            ShowInfoBar("Không tìm thấy thư mục", $"Thư mục hệ thống \"{key}\" không tồn tại trên máy.", InfoBarSeverity.Warning);
+            return Task.CompletedTask;
+        }
+
+        return AddWatchedFolderAsync(path, selectInRulesTab: false);
+    }
+
+    public Task AddWatchedFolderAsync(string folderPath, bool selectInRulesTab = false)
+    {
+        string normalized = WatchedFolderProfile.NormalizePath(folderPath);
+        if (string.IsNullOrWhiteSpace(normalized) || !Directory.Exists(normalized))
+        {
+            ShowInfoBar("Thư mục không hợp lệ", "Đường dẫn bạn chọn không tồn tại trên hệ thống.", InfoBarSeverity.Warning);
+            return Task.CompletedTask;
+        }
+
+        if (WatchedFolderProfile.IsRootOrSystemDirectory(normalized))
+        {
+            ShowInfoBar(
+                "Không thể theo dõi thư mục hệ thống",
+                "Vì an toàn hệ thống, vui lòng không thêm thư mục gốc ổ đĩa hoặc thư mục Windows.",
+                InfoBarSeverity.Warning);
+            return Task.CompletedTask;
+        }
+
+        WatchedFolderProfile? existing = _config.FindWatchedFolder(normalized);
+        if (existing is not null)
+        {
+            if (selectInRulesTab)
+            {
+                _selectedScopeFolderPath = existing.FolderPath;
+                RebuildFolderRuleTabs();
+                SyncRuleEditorFieldsFromActiveTab();
+            }
+
+            if (!existing.IsEnabled)
+            {
+                existing.IsEnabled = true;
+                SaveConfigurationOnly();
+                RefreshWatchedFolderItemsDisplay();
+                ShowInfoBar("Đã bật lại thư mục", $"Thư mục \"{existing.GetDisplayName()}\" đã có trong danh sách và được bật lại.", InfoBarSeverity.Informational);
+            }
+            else
+            {
+                ShowInfoBar("Thư mục đã có trong danh sách", $"\"{existing.GetDisplayName()}\" đang nằm trong danh sách theo dõi.", InfoBarSeverity.Informational);
+            }
+            return Task.CompletedTask;
+        }
+
+        WatchedFolderProfile profile = WatchedFolderProfile.CreateForFolder(
+            normalized,
+            _config.SmartSettings,
+            _config.Rules);
+
+        _config.WatchedFolders.Add(profile);
+        if (selectInRulesTab || _config.WatchedFolders.Count == 1)
+        {
+            _selectedScopeFolderPath = profile.FolderPath;
+        }
+
+        SaveConfigurationOnly();
+
+        RebuildWatchedFolderItems();
+        RebuildFolderRuleTabs();
+        SyncRuleEditorFieldsFromActiveTab();
+        UpdateWatcherDisplayProperties();
+        UpdateDashboardFolderRuleState();
+
+        if (WatchedFolderProfile.IsPicturesFolder(normalized) || WatchedFolderProfile.IsVideosFolder(normalized))
+        {
+            ShowInfoBar(
+                $"Đã thêm \"{profile.GetDisplayName()}\"",
+                "Đã tạo sẵn bộ quy tắc riêng: bật Gom theo Năm-Tháng và tắt nhóm tự trùng tên thư mục (Hình ảnh/Video). Bạn có thể xem và chỉnh trong tab Thiết lập Quy tắc.",
+                InfoBarSeverity.Success);
         }
         else
         {
-            int idx = _config.Rules.FindIndex(r => r.Id == rule.Id);
+            ShowInfoBar(
+                $"Đã thêm \"{profile.GetDisplayName()}\"",
+                "Đã tạo sẵn tab quy tắc riêng cho thư mục này.",
+                InfoBarSeverity.Success);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public void RemoveWatchedFolder(WatchedFolderItemViewModel item)
+    {
+        _config.WatchedFolders.RemoveAll(f => IsSameFolder(f.FolderPath, item.FolderPath));
+        if (IsSameFolder(_selectedScopeFolderPath, item.FolderPath))
+        {
+            _selectedScopeFolderPath = _config.WatchedFolders.FirstOrDefault()?.FolderPath;
+        }
+
+        SaveConfigurationOnly();
+        RebuildWatchedFolderItems();
+        RebuildFolderRuleTabs();
+        SyncRuleEditorFieldsFromActiveTab();
+        UpdateWatcherDisplayProperties();
+        UpdateDashboardFolderRuleState();
+    }
+
+    private void HandleWatchedFolderItemChanged(WatchedFolderItemViewModel item)
+    {
+        SaveConfigurationOnly();
+        RefreshWatchedFolderItemsDisplay();
+        UpdateDashboardFolderRuleState();
+
+        if (IsSameFolder(TargetFolderPath, item.FolderPath))
+        {
+            _ = AnalyzeFolderAsync();
+        }
+    }
+
+    public Task PreviewWatchedFolderAsync(WatchedFolderItemViewModel item) =>
+        OpenFolderPreviewAsync(item.FolderPath);
+
+    public async Task OpenFolderPreviewAsync(string folderPath)
+    {
+        string normalized = WatchedFolderProfile.NormalizePath(folderPath);
+        if (!string.IsNullOrWhiteSpace(normalized))
+        {
+            _selectedScopeFolderPath = normalized;
+            RebuildFolderRuleTabs();
+            SyncRuleEditorFieldsFromActiveTab();
+        }
+
+        await SetTargetFolderAndAnalyzeAsync(folderPath);
+        App.NavigateMainWindow("dashboard");
+    }
+
+    [RelayCommand]
+    public async Task OpenCurrentRuleFolderPreviewAsync()
+    {
+        string? folderPath = !string.IsNullOrWhiteSpace(_selectedScopeFolderPath)
+            ? _selectedScopeFolderPath
+            : TargetFolderPath;
+
+        if (!string.IsNullOrWhiteSpace(folderPath) && Directory.Exists(folderPath))
+        {
+            await SetTargetFolderAndAnalyzeAsync(folderPath);
+            App.NavigateMainWindow("dashboard");
+        }
+    }
+
+    [RelayCommand]
+    public void NavigateBackToWorkspace()
+    {
+        App.NavigateMainWindow("watcher");
+    }
+
+    public async Task RestoreFolderContextFromHistoryAsync(string folderPath, bool isRulesPage)
+    {
+        string normalized = WatchedFolderProfile.NormalizePath(folderPath);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return;
+        }
+
+        _selectedScopeFolderPath = normalized;
+        TargetFolderPath = normalized;
+        _config.LastTargetFolder = normalized;
+        SaveConfigurationOnly();
+        RebuildFolderRuleTabs();
+        SyncRuleEditorFieldsFromActiveTab();
+        UpdateDashboardFolderRuleState();
+
+        if (!isRulesPage && Directory.Exists(normalized))
+        {
+            await AnalyzeFolderAsync();
+        }
+    }
+
+    [RelayCommand]
+    public async Task CreateDemoSandboxInWorkspaceAsync()
+    {
+        string demoPath = DemoSandboxGenerator.CreateSampleMessyFolder();
+        await AddWatchedFolderAsync(demoPath, selectInRulesTab: false);
+        ShowInfoBar(
+            "Đã tạo thư mục Test mẫu (DemoSandbox)",
+            "Đã sinh 21 tệp mô phỏng và thêm vào Không gian dọn dẹp. Hãy bấm trực tiếp vào DemoSandbox để xem trước!",
+            InfoBarSeverity.Success);
+    }
+
+    public async Task RunSingleWatchedFolderNowAsync(WatchedFolderItemViewModel item)
+    {
+        if (IsBusy)
+        {
+            return;
+        }
+
+        if (!Directory.Exists(item.FolderPath))
+        {
+            ShowInfoBar("Thư mục không tồn tại", $"Không tìm thấy thư mục: {item.FolderPath}", InfoBarSeverity.Warning);
+            return;
+        }
+
+        int movedCount = await _watcher.ProcessFolderImmediatelyAsync(item.FolderPath, _config);
+        RefreshWatchedFolderItemsDisplay();
+
+        if (movedCount > 0)
+        {
+            ShowInfoBar(
+                $"Đã dọn \"{item.DisplayName}\"",
+                $"Đã sắp xếp gọn {movedCount} tệp trong {item.DisplayName}.",
+                InfoBarSeverity.Success);
+        }
+        else
+        {
+            ShowInfoBar(
+                $"\"{item.DisplayName}\" đã gọn gàng",
+                "Không có tệp sẵn sàng nào cần sắp xếp thêm lúc này.",
+                InfoBarSeverity.Informational);
+        }
+    }
+
+    public void NavigateToFolderRules(string? folderPath)
+    {
+        string normalized = WatchedFolderProfile.NormalizePath(folderPath);
+        if (!string.IsNullOrWhiteSpace(normalized) && Directory.Exists(normalized))
+        {
+            if (_config.FindWatchedFolder(normalized) is null && !WatchedFolderProfile.IsRootOrSystemDirectory(normalized))
+            {
+                _config.WatchedFolders.Add(WatchedFolderProfile.CreateForFolder(
+                    normalized,
+                    _config.SmartSettings,
+                    _config.Rules));
+                SaveConfigurationOnly();
+                RebuildWatchedFolderItems();
+                UpdateWatcherDisplayProperties();
+                UpdateDashboardFolderRuleState();
+            }
+
+            _selectedScopeFolderPath = normalized;
+            TargetFolderPath = normalized;
+            _config.LastTargetFolder = normalized;
+            SaveConfigurationOnly();
+            RebuildFolderRuleTabs();
+            SyncRuleEditorFieldsFromActiveTab();
+            UpdateDashboardFolderRuleState();
+        }
+
+        App.NavigateMainWindow("rules");
+    }
+
+    // Quản lý danh sách Rules trong tab thư mục đang chọn
+    public void SaveRuleChanges(OrganizationRule rule, bool isNew, bool applyToAllFolders = false)
+    {
+        List<OrganizationRule> targetRules = GetEditableRulesList();
+        if (isNew)
+        {
+            targetRules.Add(rule);
+            if (applyToAllFolders)
+            {
+                foreach (WatchedFolderProfile profile in _config.WatchedFolders)
+                {
+                    profile.EnsureStandaloneInitialized(_config.SmartSettings, _config.Rules);
+                    if (!ReferenceEquals(profile.CustomRules, targetRules))
+                    {
+                        profile.CustomRules.Add(rule.Clone());
+                    }
+                }
+                if (!ReferenceEquals(_config.Rules, targetRules))
+                {
+                    _config.Rules.Add(rule.Clone());
+                }
+            }
+        }
+        else
+        {
+            int idx = targetRules.FindIndex(r => r.Id == rule.Id);
             if (idx >= 0)
             {
-                _config.Rules[idx] = rule;
+                targetRules[idx] = rule;
             }
         }
 
         SaveConfigurationOnly();
-        ReloadRulesCollection();
+        ReloadRulesCollection(targetRules);
+        RefreshWatchedFolderItemsDisplay();
+        _ = AnalyzeFolderAsync();
+    }
+
+    public void SaveQuickRuleToScope(OrganizationRule rule, string? folderPath)
+    {
+        if (string.IsNullOrWhiteSpace(folderPath))
+        {
+            _config.Rules.Add(rule.Clone());
+            foreach (WatchedFolderProfile profile in _config.WatchedFolders)
+            {
+                profile.EnsureStandaloneInitialized(_config.SmartSettings, _config.Rules);
+                profile.CustomRules.Add(rule.Clone());
+            }
+        }
+        else
+        {
+            WatchedFolderProfile? profile = _config.FindWatchedFolder(folderPath);
+            if (profile is null)
+            {
+                _config.Rules.Add(rule);
+            }
+            else
+            {
+                profile.EnsureStandaloneInitialized(_config.SmartSettings, _config.Rules);
+                profile.CustomRules.Add(rule);
+            }
+        }
+
+        SaveConfigurationOnly();
+        RefreshWatchedFolderItemsDisplay();
+        SyncRuleEditorFieldsFromActiveTab();
         _ = AnalyzeFolderAsync();
     }
 
@@ -976,36 +1588,61 @@ public sealed partial class MainViewModel : ObservableObject
     {
         rule.IsEnabled = isEnabled;
         SaveConfigurationOnly();
+        RefreshWatchedFolderItemsDisplay();
         _ = AnalyzeFolderAsync();
     }
 
     public void SetAllRulesEnabled(bool isEnabled)
     {
-        foreach (OrganizationRule rule in _config.Rules)
+        List<OrganizationRule> targetRules = GetEditableRulesList();
+        foreach (OrganizationRule rule in targetRules)
         {
             rule.IsEnabled = isEnabled;
         }
 
         SaveConfigurationOnly();
-        ReloadRulesCollection();
+        ReloadRulesCollection(targetRules);
+        RefreshWatchedFolderItemsDisplay();
         _ = AnalyzeFolderAsync();
     }
 
     public void DeleteRule(OrganizationRule rule)
     {
-        _config.Rules.RemoveAll(r => r.Id == rule.Id);
+        List<OrganizationRule> targetRules = GetEditableRulesList();
+        targetRules.RemoveAll(r => r.Id == rule.Id);
         SaveConfigurationOnly();
-        ReloadRulesCollection();
+        ReloadRulesCollection(targetRules);
+        RefreshWatchedFolderItemsDisplay();
         _ = AnalyzeFolderAsync();
     }
 
     [RelayCommand]
     public void RestoreDefaultRules()
     {
-        _config.Rules = ConfigAndHistoryStore.CreateDefaultRules();
-        SaveConfigurationOnly();
-        ReloadRulesCollection();
-        ShowInfoBar("Đã khôi phục quy tắc mặc định", "Bộ quy tắc chuẩn Windows 11 đã được thiết lập lại.", InfoBarSeverity.Informational);
+        WatchedFolderProfile? profile = GetSelectedScopeProfile();
+
+        if (profile is not null)
+        {
+            WatchedFolderProfile fresh = WatchedFolderProfile.CreateForFolder(profile.FolderPath);
+            profile.CustomSmartSettings = fresh.CustomSmartSettings;
+            profile.CustomRules = fresh.CustomRules;
+            SaveConfigurationOnly();
+            SyncRuleEditorFieldsFromActiveTab();
+            RefreshWatchedFolderItemsDisplay();
+            ShowInfoBar(
+                $"Đã đặt lại quy tắc cho \"{profile.GetDisplayName()}\"",
+                "Các quy tắc và tùy chọn gom nhóm của thư mục này đã được khôi phục về mặc định phù hợp.",
+                InfoBarSeverity.Informational);
+        }
+        else
+        {
+            _config.Rules = ConfigAndHistoryStore.CreateDefaultRules();
+            SaveConfigurationOnly();
+            ReloadRulesCollection(_config.Rules);
+            RefreshWatchedFolderItemsDisplay();
+            ShowInfoBar("Đã khôi phục quy tắc mặc định", "Bộ quy tắc chuẩn Windows 11 đã được thiết lập lại.", InfoBarSeverity.Informational);
+        }
+
         _ = AnalyzeFolderAsync();
     }
 
@@ -1022,26 +1659,34 @@ public sealed partial class MainViewModel : ObservableObject
             _watcher.Stop();
             _config.SmartSettings.EnableAutoWatcher = false;
             SaveConfigurationOnly();
-            UpdateWatcherDisplayProperties();
+            RefreshWatchedFolderItemsDisplay();
             return;
         }
 
         if (_watcher.IsRunning)
         {
-            UpdateWatcherDisplayProperties();
+            RefreshWatchedFolderItemsDisplay();
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(TargetFolderPath) || !Directory.Exists(TargetFolderPath))
+        var enabledFolders = _config.WatchedFolders
+            .Where(f => f.IsEnabled && !string.IsNullOrWhiteSpace(f.FolderPath) && Directory.Exists(f.FolderPath))
+            .ToList();
+
+        if (enabledFolders.Count == 0)
         {
-            ShowInfoBar("Chưa chọn thư mục hợp lệ", "Vui lòng chọn thư mục cần theo dõi trước khi bật.", InfoBarSeverity.Warning);
-            UpdateWatcherDisplayProperties();
+            ShowInfoBar(
+                "Chưa có thư mục theo dõi đang bật",
+                "Hãy thêm ít nhất 1 thư mục hợp lệ và bật công tắc của thư mục đó trước khi khởi động.",
+                InfoBarSeverity.Warning);
+            RefreshWatchedFolderItemsDisplay();
             return;
         }
 
         _config.SmartSettings.EnableAutoWatcher = true;
         SaveConfigurationOnly();
-        _watcher.Start(TargetFolderPath, _config);
+        _watcher.StartConfiguredFolders(_config);
+        RefreshWatchedFolderItemsDisplay();
     }
 
     [RelayCommand]
@@ -1054,19 +1699,13 @@ public sealed partial class MainViewModel : ObservableObject
             return "Đang bận xử lý tác vụ khác, vui lòng chờ giây lát.";
         }
 
-        if (string.IsNullOrWhiteSpace(TargetFolderPath) || !Directory.Exists(TargetFolderPath))
-        {
-            const string missingMsg = "Vui lòng chọn thư mục cần dọn dẹp trước.";
-            ShowInfoBar("Chưa chọn thư mục hợp lệ", missingMsg, InfoBarSeverity.Warning);
-            return missingMsg;
-        }
-
         if (_watcher.IsRunning)
         {
             int movedCount = await _watcher.ProcessImmediatelyAsync();
+            RefreshWatchedFolderItemsDisplay();
             if (movedCount > 0)
             {
-                string msg = $"Đã tự động sắp xếp gọn {movedCount} tệp trong thư mục hiện tại.";
+                string msg = $"Đã tự động sắp xếp gọn {movedCount} tệp trong {_watcher.ActiveFolderCount} thư mục đang theo dõi.";
                 ShowInfoBar("Đã dọn dẹp ngay tức thì", msg, InfoBarSeverity.Success);
                 return msg;
             }
@@ -1074,6 +1713,38 @@ public sealed partial class MainViewModel : ObservableObject
             const string noneMsg = "Không có tệp sẵn sàng nào cần dọn thêm lúc này.";
             ShowInfoBar("Không có tệp cần dọn", noneMsg, InfoBarSeverity.Informational);
             return noneMsg;
+        }
+
+        var enabledFolders = _config.WatchedFolders
+            .Where(f => f.IsEnabled && Directory.Exists(f.FolderPath))
+            .ToList();
+
+        if (enabledFolders.Count > 0)
+        {
+            int totalMoved = 0;
+            foreach (WatchedFolderProfile folder in enabledFolders)
+            {
+                totalMoved += await _watcher.ProcessFolderImmediatelyAsync(folder.FolderPath, _config);
+            }
+
+            RefreshWatchedFolderItemsDisplay();
+            if (totalMoved > 0)
+            {
+                string msg = $"Đã sắp xếp gọn {totalMoved} tệp trên {enabledFolders.Count} thư mục.";
+                ShowInfoBar("Đã dọn dẹp xong!", msg, InfoBarSeverity.Success);
+                return msg;
+            }
+
+            const string cleanMsg = "Các thư mục theo dõi đều đã gọn gàng.";
+            ShowInfoBar("Không có tệp cần dọn", cleanMsg, InfoBarSeverity.Informational);
+            return cleanMsg;
+        }
+
+        if (string.IsNullOrWhiteSpace(TargetFolderPath) || !Directory.Exists(TargetFolderPath))
+        {
+            const string missingMsg = "Vui lòng chọn hoặc thêm thư mục cần dọn dẹp trước.";
+            ShowInfoBar("Chưa chọn thư mục hợp lệ", missingMsg, InfoBarSeverity.Warning);
+            return missingMsg;
         }
 
         await AnalyzeFolderAsync();
@@ -1136,7 +1807,8 @@ public sealed partial class MainViewModel : ObservableObject
         RunOnUi(async () =>
         {
             ReloadHistoryCollection();
-            if (string.Equals(session.SourceFolderPath, TargetFolderPath, StringComparison.OrdinalIgnoreCase))
+            RefreshWatchedFolderItemsDisplay();
+            if (IsSameFolder(session.SourceFolderPath, TargetFolderPath))
             {
                 await AnalyzeFolderAsync();
             }
@@ -1148,46 +1820,87 @@ public sealed partial class MainViewModel : ObservableObject
         RunOnUi(() =>
         {
             IsWatcherRunning = isRunning;
-            UpdateWatcherDisplayProperties();
+            RefreshWatchedFolderItemsDisplay();
         });
     }
 
     private void UpdateWatcherDisplayProperties()
     {
-        SmartGroupingSettings settings = _config.SmartSettings;
-        string unitSuffix = SmartGroupingSettings.GetUnitDisplayName(settings.AutoWatcherDelayUnit);
-        string delayDisplay = settings.GetAutoWatcherDelayDisplayText();
-
-        WatcherDelayUnitSuffixText = unitSuffix;
-        WatcherDelaySummaryText = $"Đang áp dụng: Chờ {delayDisplay} sau khi phát hiện tệp mới";
-        WatcherCompactDelayText = $"Chờ {delayDisplay} sau khi có tệp mới";
-
         bool running = _watcher.IsRunning;
         IsWatcherRunning = running;
 
+        int totalConfigured = _config.WatchedFolders.Count;
+        var enabledProfiles = _config.WatchedFolders
+            .Where(f => f.IsEnabled && Directory.Exists(f.FolderPath))
+            .ToList();
+        int activeCount = _watcher.ActiveFolderCount;
+
         if (running)
         {
-            string activeFolder = string.IsNullOrWhiteSpace(_watcher.WatchedFolder) ? TargetFolderPath : _watcher.WatchedFolder;
-            WatcherStatusTitle = "Dịch vụ Tự động sắp xếp đang hoạt động";
-            WatcherBadgeText = "● ĐANG BẬT TỰ ĐỘNG SẮP XẾP";
-            WatcherCompactBadgeText = "● Đang bật tự động";
-            WatcherActionButtonText = "Dừng tự động sắp xếp";
-            WatcherCompactActionText = "Dừng tự động";
+            IReadOnlyList<string> activeFolders = _watcher.ActiveWatchedFolders;
+            string namesPreview = FormatFolderNamesSummary(activeFolders.Select(p =>
+                _config.FindWatchedFolder(p)?.GetDisplayName() ?? Path.GetFileName(p)));
+
+            WatcherStatusTitle = $"Đang tự động sắp xếp {activeCount} thư mục";
+            WatcherBadgeText = $"● ĐANG BẬT ({activeCount} THƯ MỤC)";
+            WatcherCompactBadgeText = $"● Đang bật ({activeCount} thư mục)";
+            WatcherCompactActionText = "Tạm dừng";
             WatcherActionButtonGlyph = "\uE71A";
-            WatcherStatusText = $"Đang theo dõi tại \"{activeFolder}\" (thời gian tự động dọn: {delayDisplay}).";
+            WatcherStatusText = $"Đang theo dõi: {namesPreview}.";
+            WatcherCompactDelayText = $"Đang theo dõi: {namesPreview}";
+
+            TrayFolderTitle = activeCount == 1
+                ? (_config.FindWatchedFolder(activeFolders[0])?.GetDisplayName() ?? activeFolders[0])
+                : $"Đang bảo vệ {activeCount} thư mục";
+            TrayFolderSubtitle = namesPreview;
         }
         else
         {
             WatcherStatusTitle = "Dịch vụ Tự động sắp xếp đang tắt";
             WatcherBadgeText = "○ ĐANG TẠM DỪNG";
             WatcherCompactBadgeText = "○ Đang tạm dừng";
-            WatcherActionButtonText = "Bật tự động sắp xếp";
             WatcherCompactActionText = "Bật tự động";
             WatcherActionButtonGlyph = "\uE768";
-            WatcherStatusText = string.IsNullOrWhiteSpace(TargetFolderPath)
-                ? "Chưa chọn thư mục theo dõi. Hãy chọn thư mục ở bên dưới trước khi bật."
-                : $"Đang tạm dừng. Khi bật, Sofol sẽ tự động sắp xếp thư mục \"{TargetFolderPath}\" (chờ {delayDisplay}).";
+
+            if (totalConfigured == 0)
+            {
+                WatcherStatusText = "Chưa có thư mục nào trong danh sách. Hãy bấm nút thêm nhanh bên dưới.";
+                WatcherCompactDelayText = "Chưa có thư mục theo dõi";
+                TrayFolderTitle = TargetFolderDisplayName;
+                TrayFolderSubtitle = string.IsNullOrWhiteSpace(TargetFolderPath) ? "Chưa chọn thư mục" : TargetFolderPath;
+            }
+            else if (enabledProfiles.Count == 0)
+            {
+                WatcherStatusText = $"Đang tạm dừng ({totalConfigured} thư mục trong danh sách nhưng đang tắt công tắc).";
+                WatcherCompactDelayText = "Các thư mục theo dõi đang tắt";
+                TrayFolderTitle = $"Có {totalConfigured} thư mục (đang tắt)";
+                TrayFolderSubtitle = "Mở Sofol để bật ít nhất 1 thư mục";
+            }
+            else
+            {
+                string namesPreview = FormatFolderNamesSummary(enabledProfiles.Select(f => f.GetDisplayName()));
+                WatcherStatusText = $"Đang tạm dừng ({enabledProfiles.Count} thư mục sẵn sàng: {namesPreview}).";
+                WatcherCompactDelayText = $"Sẵn sàng theo dõi: {namesPreview}";
+                TrayFolderTitle = enabledProfiles.Count == 1
+                    ? enabledProfiles[0].GetDisplayName()
+                    : $"Sẵn sàng theo dõi {enabledProfiles.Count} thư mục";
+                TrayFolderSubtitle = namesPreview;
+            }
         }
+    }
+
+    private static string FormatFolderNamesSummary(IEnumerable<string> names)
+    {
+        var list = names.Where(n => !string.IsNullOrWhiteSpace(n)).ToList();
+        if (list.Count == 0)
+        {
+            return "Chưa có";
+        }
+        if (list.Count <= 3)
+        {
+            return string.Join(", ", list);
+        }
+        return $"{string.Join(", ", list.Take(3))} (+{list.Count - 3})";
     }
 
     private void UpdateTargetFolderDisplayName(string? value)
@@ -1201,6 +1914,14 @@ public sealed partial class MainViewModel : ObservableObject
         string trimmed = value.Trim().TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         string folderName = Path.GetFileName(trimmed);
         TargetFolderDisplayName = string.IsNullOrWhiteSpace(folderName) ? value.Trim() : folderName;
+    }
+
+    private static bool IsSameFolder(string? a, string? b)
+    {
+        string na = WatchedFolderProfile.NormalizePath(a);
+        string nb = WatchedFolderProfile.NormalizePath(b);
+        return !string.IsNullOrWhiteSpace(na) &&
+               string.Equals(na, nb, StringComparison.OrdinalIgnoreCase);
     }
 
     private void RunOnUi(Action action)

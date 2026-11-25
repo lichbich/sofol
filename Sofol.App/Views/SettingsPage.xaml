@@ -67,6 +67,86 @@
                 </Border>
             </StackPanel>
 
+            <!-- Khởi động cùng Windows -->
+            <StackPanel Spacing="8">
+                <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Khởi động &amp; Chạy ngầm cùng Windows" />
+
+                <Border Padding="16,14" Style="{StaticResource FluentCardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border
+                            Width="36"
+                            Height="36"
+                            VerticalAlignment="Center"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            CornerRadius="8">
+                            <FontIcon FontSize="17" Glyph="&#xE7E8;" />
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                            <TextBlock
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="Khởi động cùng Windows"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                FontSize="12.5"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="Tự động chạy Sofol ngay khi bật máy và đăng nhập vào Windows."
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <ToggleSwitch
+                            Grid.Column="2"
+                            MinWidth="0"
+                            VerticalAlignment="Center"
+                            IsOn="{x:Bind ViewModel.RunAtWindowsStartup, Mode=TwoWay}" />
+                    </Grid>
+                </Border>
+
+                <Border Padding="16,14" Style="{StaticResource FluentCardStyle}">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border
+                            Width="36"
+                            Height="36"
+                            VerticalAlignment="Center"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            CornerRadius="8">
+                            <FontIcon FontSize="17" Glyph="&#xE737;" />
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                            <TextBlock
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="Mở cửa sổ chính khi khởi động máy"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                FontSize="12.5"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="Mặc định tắt: khi bật máy, Sofol chỉ chạy gọn trong khay hệ thống (System Tray) mà không bung cửa sổ lên màn hình."
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <ToggleSwitch
+                            Grid.Column="2"
+                            MinWidth="0"
+                            VerticalAlignment="Center"
+                            IsEnabled="{x:Bind ViewModel.RunAtWindowsStartup, Mode=OneWay}"
+                            IsOn="{x:Bind ViewModel.ShowWindowOnWindowsStartup, Mode=TwoWay}" />
+                    </Grid>
+                </Border>
+            </StackPanel>
+
             <!-- An toàn & Xử lý tệp -->
             <StackPanel Spacing="8">
                 <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="Xử lý tệp &amp; An toàn" />
@@ -109,43 +189,6 @@
                             <ComboBoxItem Content="Bỏ qua không di chuyển" />
                             <ComboBoxItem Content="Ghi đè nếu tệp nguồn mới hơn" />
                         </ComboBox>
-                    </Grid>
-                </Border>
-
-                <Border Padding="16,14" Style="{StaticResource FluentCardStyle}">
-                    <Grid ColumnSpacing="16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <Border
-                            Width="36"
-                            Height="36"
-                            VerticalAlignment="Center"
-                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                            CornerRadius="8">
-                            <FontIcon FontSize="17" Glyph="&#xE787;" />
-                        </Border>
-
-                        <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
-                            <TextBlock
-                                Style="{StaticResource BodyStrongTextBlockStyle}"
-                                Text="Tự động phân chia theo Năm-Tháng"
-                                TextWrapping="Wrap" />
-                            <TextBlock
-                                FontSize="12.5"
-                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                Text="Chia tiếp thư mục con theo Năm-Tháng sửa đổi (ví dụ: Hình ảnh\2026-10)."
-                                TextWrapping="Wrap" />
-                        </StackPanel>
-
-                        <ToggleSwitch
-                            Grid.Column="2"
-                            MinWidth="0"
-                            VerticalAlignment="Center"
-                            IsOn="{x:Bind ViewModel.EnableDateSubfolders, Mode=TwoWay}" />
                     </Grid>
                 </Border>
 
@@ -322,7 +365,7 @@
                                             FontSize="11"
                                             FontWeight="SemiBold"
                                             Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                            Text="v1.1.1 (Bản mới nhất)" />
+                                            Text="{x:Bind ViewModel.CurrentVersionBadgeText, Mode=OneWay}" />
                                     </Border>
                                 </StackPanel>
                                 <TextBlock

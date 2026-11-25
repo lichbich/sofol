@@ -4,7 +4,7 @@ $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $scriptDir
 
-$version = "1.1.1"
+$version = "1.2.1"
 $distDir = Join-Path $scriptDir "dist"
 $packageDir = Join-Path $distDir "Sofol-v$version-win-x64"
 $zipPath = Join-Path $distDir "Sofol-v$version-win-x64.zip"
@@ -20,12 +20,16 @@ if (Test-Path $distDir) {
 }
 New-Item -ItemType Directory -Path $packageDir -Force | Out-Null
 
-# 2. Biên dịch Release Unpackaged Self-Contained x64
+# 2. Biên dịch Release Unpackaged Self-Contained x64 (dùng BaseOutputPath riêng để không xung đột bản đang chạy)
 Write-Host "`n--> Đang biên dịch Release cho win-x64 (Self-Contained)..." -ForegroundColor Yellow
 $projectPath = Join-Path $scriptDir "Sofol.App\Sofol.App.csproj"
-dotnet publish $projectPath -c Release -r win-x64 --self-contained true -p:PublishTrimmed=false -o $packageDir
+dotnet publish $projectPath -c Release -r win-x64 --self-contained true -p:PublishTrimmed=false -p:BaseOutputPath="bin_release\" -o $packageDir
 
-if ($LASTEXITCODE -ne 0) {
+$publishExit = $LASTEXITCODE
+Remove-Item -Path (Join-Path $scriptDir "Sofol.App\bin_release") -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path (Join-Path $scriptDir "Sofol.Core\bin_release") -Recurse -Force -ErrorAction SilentlyContinue
+
+if ($publishExit -ne 0) {
     Write-Error "Biên dịch thất bại!"
     exit 1
 }

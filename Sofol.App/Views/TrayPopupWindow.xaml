@@ -102,15 +102,15 @@
                             FontSize="13.5"
                             FontWeight="SemiBold"
                             MaxLines="1"
-                            Text="{x:Bind ViewModel.TargetFolderDisplayName, Mode=OneWay}"
+                            Text="{x:Bind ViewModel.TrayFolderTitle, Mode=OneWay}"
                             TextTrimming="CharacterEllipsis" />
                         <TextBlock
                             FontSize="11.5"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             MaxLines="1"
-                            Text="{x:Bind ViewModel.TargetFolderPath, Mode=OneWay}"
+                            Text="{x:Bind ViewModel.TrayFolderSubtitle, Mode=OneWay}"
                             TextTrimming="CharacterEllipsis"
-                            ToolTipService.ToolTip="{x:Bind ViewModel.TargetFolderPath, Mode=OneWay}" />
+                            ToolTipService.ToolTip="{x:Bind ViewModel.TrayFolderSubtitle, Mode=OneWay}" />
                     </StackPanel>
 
                     <Button
@@ -278,6 +278,11 @@
                     x:Name="QuickRuleKeywordBox"
                     Header="Từ khóa tên tệp (tùy chọn)"
                     PlaceholderText="hoa don, invoice" />
+
+                <ComboBox
+                    x:Name="QuickRuleScopeCombo"
+                    HorizontalAlignment="Stretch"
+                    Header="Áp dụng cho" />
 
                 <TextBlock
                     x:Name="QuickRuleErrorText"

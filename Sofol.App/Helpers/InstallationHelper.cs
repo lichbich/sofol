@@ -15,7 +15,8 @@ public static class InstallationHelper
     public const string AppName = "Sofol";
     public const string AppDisplayName = "Sofol";
     public const string AppPublisher = "Sofol";
-    public const string AppVersion = "1.1.1";
+    public const string AppVersion = "1.2.1";
+    public const string StartupArgument = "--startup";
 
     [ComImport]
     [Guid("00021401-0000-0000-C000-000000000046")]
@@ -186,7 +187,7 @@ public static class InstallationHelper
         }
     }
 
-    public static void SetRunAtStartup(bool enable, string exePath)
+    public static void SetRunAtStartup(bool enable, string? exePath = null)
     {
         try
         {
@@ -198,7 +199,10 @@ public static class InstallationHelper
 
             if (enable)
             {
-                key.SetValue(AppName, $"\"{exePath}\"");
+                string resolvedExe = string.IsNullOrWhiteSpace(exePath)
+                    ? (Environment.ProcessPath ?? Path.Combine(AppContext.BaseDirectory, "Sofol.App.exe"))
+                    : exePath;
+                key.SetValue(AppName, $"\"{resolvedExe}\" {StartupArgument}");
             }
             else
             {
@@ -208,6 +212,28 @@ public static class InstallationHelper
         catch (Exception ex)
         {
             Debug.WriteLine($"Lỗi cấu hình khởi động cùng Windows: {ex.Message}");
+        }
+    }
+
+    public static void EnsureStartupEntryUsesFlag()
+    {
+        try
+        {
+            using RegistryKey? key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", writable: true);
+            if (key?.GetValue(AppName) is string raw &&
+                !string.IsNullOrWhiteSpace(raw) &&
+                !raw.Contains(StartupArgument, StringComparison.OrdinalIgnoreCase))
+            {
+                string cleanExe = raw.Trim().Trim('"');
+                if (!string.IsNullOrWhiteSpace(cleanExe))
+                {
+                    key.SetValue(AppName, $"\"{cleanExe}\" {StartupArgument}");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Lỗi chuẩn hóa khóa khởi động: {ex.Message}");
         }
     }
 

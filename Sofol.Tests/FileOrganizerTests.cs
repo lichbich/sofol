@@ -382,6 +382,194 @@ public sealed class FileOrganizerTests : IDisposable
         Assert.True(File.Exists(Path.Combine(watchDir, "Hình ảnh", "cat.png")));
     }
 
+    [Fact]
+    public async Task FolderWatcherService_WatchesMultipleFoldersSimultaneously_WithIndependentFolderRules()
+    {
+        string downloadsDir = Path.Combine(_tempRoot, "Downloads");
+        string picturesDir = Path.Combine(_tempRoot, "Pictures");
+        string documentsDir = Path.Combine(_tempRoot, "Documents");
+        Directory.CreateDirectory(downloadsDir);
+        Directory.CreateDirectory(picturesDir);
+        Directory.CreateDirectory(documentsDir);
+
+        string storeDir = Path.Combine(_tempRoot, "MultiWatcherStore");
+        var store = new ConfigAndHistoryStore(storeDir);
+
+        AppConfiguration config = ConfigAndHistoryStore.CreateDefaultConfiguration();
+        config.SmartSettings.AutoWatcherDelayValue = 1;
+        config.SmartSettings.AutoWatcherDelayUnit = WatcherDelayUnit.Seconds;
+
+        WatchedFolderProfile downloadsProfile = WatchedFolderProfile.CreateForFolder(downloadsDir, config.SmartSettings, config.Rules);
+        WatchedFolderProfile picturesProfile = WatchedFolderProfile.CreateForFolder(picturesDir, config.SmartSettings, config.Rules);
+        WatchedFolderProfile documentsProfile = WatchedFolderProfile.CreateForFolder(documentsDir, config.SmartSettings, config.Rules);
+
+        // Kiểm tra Pictures tự động tắt quy tắc Hình ảnh (tránh Pictures\Hình ảnh) và bật Gom theo Năm-Tháng
+        Assert.False(picturesProfile.CustomRules.Single(r => r.Id == "rule-images").IsEnabled);
+        Assert.True(picturesProfile.CustomSmartSettings!.EnableDateSubfolders);
+        Assert.True(picturesProfile.CustomSmartSettings!.EnableDirectDateGrouping);
+
+        // Cấu hình riêng cho Documents
+        documentsProfile.CustomSmartSettings!.EnableExtensionRules = false;
+        documentsProfile.CustomSmartSettings.EnablePrefixSimilarityGrouping = false;
+        documentsProfile.CustomRules.Add(new OrganizationRule
+        {
+            Id = "docs-contract",
+            Name = "Hợp đồng",
+            TargetFolderName = "Hợp đồng",
+            Extensions = [".pdf"],
+            Keywords = ["HopDong"],
+            Priority = 10,
+            IsEnabled = true
+        });
+
+        config.WatchedFolders = [downloadsProfile, picturesProfile, documentsProfile];
+
+        using var watcher = new FolderWatcherService(_engine, store);
+        var allCompleted = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var completedFolders = new System.Collections.Concurrent.ConcurrentDictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+        watcher.SessionCompleted += s =>
+        {
+            completedFolders[s.SourceFolderPath] = true;
+            if (completedFolders.ContainsKey(downloadsDir) &&
+                completedFolders.ContainsKey(picturesDir) &&
+                completedFolders.ContainsKey(documentsDir))
+            {
+                allCompleted.TrySetResult(true);
+            }
+        };
+
+        watcher.StartConfiguredFolders(config);
+        Assert.True(watcher.IsRunning);
+        Assert.Equal(3, watcher.ActiveFolderCount);
+
+        await File.WriteAllTextAsync(Path.Combine(downloadsDir, "installer.exe"), "exe");
+        await File.WriteAllTextAsync(Path.Combine(picturesDir, "DaLat_1.jpg"), "pic1");
+        await File.WriteAllTextAsync(Path.Combine(picturesDir, "DaLat_2.jpg"), "pic2");
+        await File.WriteAllTextAsync(Path.Combine(picturesDir, "sunset.png"), "pic3");
+        await File.WriteAllTextAsync(Path.Combine(documentsDir, "HopDong_2026.pdf"), "pdf");
+
+        await allCompleted.Task.WaitAsync(TimeSpan.FromSeconds(12));
+
+        // 1. Downloads: dùng quy tắc độc lập mặc định
+        Assert.True(File.Exists(Path.Combine(downloadsDir, "Bộ cài & Ứng dụng", "installer.exe")));
+
+        // 2. Pictures: gom cụm tên sự kiện & Năm-Tháng, không tạo thư mục "Hình ảnh"
+        Assert.False(Directory.Exists(Path.Combine(picturesDir, "Hình ảnh")));
+        Assert.True(File.Exists(Path.Combine(picturesDir, "DaLat", "DaLat_1.jpg")));
+        Assert.True(File.Exists(Path.Combine(picturesDir, "DaLat", "DaLat_2.jpg")));
+        string expectedMonthFolder = Path.Combine(picturesDir, DateTime.Now.ToString("yyyy-MM"));
+        Assert.True(File.Exists(Path.Combine(expectedMonthFolder, "sunset.png")));
+
+        // 3. Documents: dùng quy tắc Hợp đồng riêng
+        Assert.True(File.Exists(Path.Combine(documentsDir, "Hợp đồng", "HopDong_2026.pdf")));
+    }
+
+    [Fact]
+    public async Task WatchedFolderProfile_CreateForFolder_PreconfiguresMediaFoldersTransparently_AndSkipsDisabled()
+    {
+        WatchedFolderProfile pictures = WatchedFolderProfile.CreateForFolder(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyPictures));
+        Assert.False(pictures.CustomRules.Single(r => r.Id == "rule-images").IsEnabled);
+        Assert.True(pictures.CustomRules.Single(r => r.Id == "rule-documents").IsEnabled);
+        Assert.True(pictures.CustomSmartSettings!.EnableDateSubfolders);
+
+        WatchedFolderProfile videos = WatchedFolderProfile.CreateForFolder(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyVideos));
+        Assert.False(videos.CustomRules.Single(r => r.Id == "rule-videos").IsEnabled);
+        Assert.True(videos.CustomSmartSettings!.EnableDateSubfolders);
+
+        // Kiểm tra bảng chọn thời gian chờ gọn
+        videos.ApplyDelayPresetIndex(2); // Chờ 5 phút
+        Assert.Equal(5, videos.CustomDelayValue);
+        Assert.Equal(WatcherDelayUnit.Minutes, videos.CustomDelayUnit);
+        Assert.Equal(2, videos.GetDelayPresetIndex());
+
+        string enabledDir = Path.Combine(_tempRoot, "EnabledDir");
+        string disabledDir = Path.Combine(_tempRoot, "DisabledDir");
+        Directory.CreateDirectory(enabledDir);
+        Directory.CreateDirectory(disabledDir);
+
+        await File.WriteAllTextAsync(Path.Combine(enabledDir, "a.png"), "a");
+        await File.WriteAllTextAsync(Path.Combine(disabledDir, "b.png"), "b");
+
+        var store = new ConfigAndHistoryStore(Path.Combine(_tempRoot, "DisabledStore"));
+        AppConfiguration config = ConfigAndHistoryStore.CreateDefaultConfiguration();
+        config.SmartSettings.AutoWatcherDelayValue = 1;
+        config.SmartSettings.AutoWatcherDelayUnit = WatcherDelayUnit.Seconds;
+
+        WatchedFolderProfile enabledProfile = WatchedFolderProfile.CreateForFolder(enabledDir, config.SmartSettings, config.Rules);
+        WatchedFolderProfile disabledProfile = WatchedFolderProfile.CreateForFolder(disabledDir, config.SmartSettings, config.Rules);
+        disabledProfile.IsEnabled = false;
+        config.WatchedFolders = [enabledProfile, disabledProfile];
+
+        using var watcher = new FolderWatcherService(_engine, store);
+        var movedTcs = new TaskCompletionSource<OrganizationSession>(TaskCreationOptions.RunContinuationsAsynchronously);
+        watcher.SessionCompleted += s => movedTcs.TrySetResult(s);
+
+        watcher.StartConfiguredFolders(config);
+        Assert.Equal(1, watcher.ActiveFolderCount);
+
+        OrganizationSession session = await movedTcs.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(enabledDir, session.SourceFolderPath);
+        Assert.True(File.Exists(Path.Combine(enabledDir, "Hình ảnh", "a.png")));
+        Assert.True(File.Exists(Path.Combine(disabledDir, "b.png")));
+    }
+
+    [Fact]
+    public void ConfigAndHistoryStore_MigratesToV6StandaloneFolderProfiles_AndPersistsDelayPresets()
+    {
+        string storeDir = Path.Combine(_tempRoot, "MigrateV6Store");
+        Directory.CreateDirectory(storeDir);
+
+        string legacyV5Json = """
+        {
+          "ConfigSchemaVersion": 5,
+          "LastTargetFolder": "C:\\Users\\Test\\Downloads\\",
+          "SmartSettings": {
+            "AutoWatcherDelayValue": 1,
+            "AutoWatcherDelayUnit": 3
+          },
+          "Rules": [],
+          "WatchedFolders": [
+            {
+              "FolderPath": "C:\\Users\\Test\\Pictures",
+              "IsEnabled": true,
+              "RuleMode": 1
+            }
+          ]
+        }
+        """;
+        File.WriteAllText(Path.Combine(storeDir, "config.json"), legacyV5Json);
+
+        var store = new ConfigAndHistoryStore(storeDir);
+        AppConfiguration migrated = store.LoadConfiguration();
+
+        Assert.Equal(AppConfiguration.CurrentConfigSchemaVersion, migrated.ConfigSchemaVersion);
+        WatchedFolderProfile? picProfile = migrated.FindWatchedFolder(@"C:\Users\Test\Pictures");
+        Assert.NotNull(picProfile);
+        Assert.Equal(FolderRuleMode.CustomRules, picProfile!.RuleMode);
+        Assert.NotNull(picProfile.CustomSmartSettings);
+        Assert.True(picProfile.CustomSmartSettings!.EnableDateSubfolders);
+        Assert.False(picProfile.CustomRules.Single(r => r.Id == "rule-images").IsEnabled);
+
+        picProfile.ApplyDelayPresetIndex(3); // Chờ 15 phút
+        store.SaveConfiguration(migrated);
+        AppConfiguration reloaded = store.LoadConfiguration();
+
+        WatchedFolderProfile? reloadedPic = reloaded.FindWatchedFolder(@"C:\Users\Test\Pictures");
+        Assert.NotNull(reloadedPic);
+        Assert.Equal(3, reloadedPic!.GetDelayPresetIndex());
+        Assert.Equal(15, reloadedPic.CustomDelayValue);
+        Assert.Equal(WatcherDelayUnit.Minutes, reloadedPic.CustomDelayUnit);
+        Assert.False(reloaded.SmartSettings.ShowWindowOnWindowsStartup);
+
+        reloaded.SmartSettings.ShowWindowOnWindowsStartup = true;
+        store.SaveConfiguration(reloaded);
+        AppConfiguration reloadedStartup = store.LoadConfiguration();
+        Assert.True(reloadedStartup.SmartSettings.ShowWindowOnWindowsStartup);
+    }
+
     private static FileMovePlanItem GetItem(FolderAnalysisResult result, string fileName) =>
         result.Items.Single(i => string.Equals(i.FileName, fileName, StringComparison.OrdinalIgnoreCase));
 

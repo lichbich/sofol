@@ -3,87 +3,112 @@
     x:Class="Sofol.App.Views.RulesPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:models="using:Sofol.Core.Models">
+    xmlns:models="using:Sofol.Core.Models"
+    xmlns:vm="using:Sofol.App.ViewModels">
 
     <ScrollViewer
         Padding="28,20,28,28"
         HorizontalScrollBarVisibility="Disabled"
         HorizontalScrollMode="Disabled"
         VerticalScrollBarVisibility="Auto">
-        <StackPanel HorizontalAlignment="Stretch" Spacing="20">
+        <StackPanel HorizontalAlignment="Stretch" Spacing="18">
 
-            <!-- Tiêu đề -->
+            <!-- Breadcrumb 3 cấp chuẩn Windows 11 Settings -->
             <Grid ColumnSpacing="16" RowSpacing="4">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
 
-                <TextBlock
-                    Grid.Row="0"
-                    Grid.Column="0"
-                    VerticalAlignment="Center"
-                    Style="{StaticResource TitleTextBlockStyle}"
-                    Text="Thiết lập Quy tắc"
-                    TextWrapping="Wrap" />
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Button
+                            Margin="-8,0,0,0"
+                            Padding="8,2"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Click="OnBreadcrumbWorkspaceClick"
+                            CornerRadius="6"
+                            ToolTipService.ToolTip="Quay lại Không gian dọn dẹp">
+                            <TextBlock
+                                FontSize="24"
+                                FontWeight="SemiBold"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="Không gian dọn dẹp" />
+                        </Button>
+                        <FontIcon
+                            Margin="2,4,2,0"
+                            VerticalAlignment="Center"
+                            FontSize="13"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Glyph="&#xE76C;" />
+                        <Button
+                            Padding="8,2"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Command="{x:Bind ViewModel.OpenCurrentRuleFolderPreviewCommand}"
+                            CornerRadius="6"
+                            ToolTipService.ToolTip="Chuyển sang Xem trước &amp; Dọn dẹp cho thư mục này">
+                            <TextBlock
+                                FontSize="24"
+                                FontWeight="SemiBold"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="{x:Bind ViewModel.SelectedRuleTabFolderName, Mode=OneWay}" />
+                        </Button>
+                        <FontIcon
+                            Margin="2,4,2,0"
+                            VerticalAlignment="Center"
+                            FontSize="13"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Glyph="&#xE76C;" />
+                        <TextBlock
+                            VerticalAlignment="Center"
+                            FontSize="24"
+                            FontWeight="SemiBold"
+                            Text="Quy tắc sắp xếp" />
+                    </StackPanel>
+
+                    <TextBlock
+                        FontFamily="Cascadia Mono, Consolas"
+                        FontSize="12"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{x:Bind ViewModel.SelectedRuleTabFolderPath, Mode=OneWay}"
+                        TextTrimming="CharacterEllipsis"
+                        ToolTipService.ToolTip="{x:Bind ViewModel.SelectedRuleTabFolderPath, Mode=OneWay}" />
+                </StackPanel>
 
                 <StackPanel
-                    Grid.Row="0"
                     Grid.Column="1"
                     Orientation="Horizontal"
                     Spacing="8"
                     VerticalAlignment="Center">
+                    <Button
+                        Command="{x:Bind ViewModel.OpenCurrentRuleFolderPreviewCommand}"
+                        ToolTipService.ToolTip="Xem trước kết quả sắp xếp với bộ quy tắc này">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon FontSize="14" Glyph="&#xE890;" />
+                            <TextBlock Text="Xem trước &amp; Dọn" />
+                        </StackPanel>
+                    </Button>
                     <Button Click="OnRestoreDefaultsClick" Content="Khôi phục mặc định" />
                     <Button Click="OnAddRuleClick" Style="{StaticResource AccentButtonStyle}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <FontIcon FontSize="14" Glyph="&#xE710;" />
-                            <TextBlock Text="Thêm quy tắc mới" />
+                            <TextBlock Text="Thêm quy tắc" />
                         </StackPanel>
                     </Button>
                 </StackPanel>
-
-                <TextBlock
-                    Grid.Row="1"
-                    Grid.Column="0"
-                    Grid.ColumnSpan="2"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Text="Tùy biến định dạng tệp nào vào thư mục nào, lọc theo từ khóa và tinh chỉnh thuật toán gom cụm tên giống nhau."
-                    TextWrapping="Wrap" />
             </Grid>
 
-            <!-- Nhóm 1: Gom cụm tên thông minh -->
+            <!-- 2 tùy chọn thông minh gọn nhẹ cho thư mục đang chọn -->
             <StackPanel Spacing="8">
-                <Grid ColumnSpacing="12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBlock
-                        VerticalAlignment="Center"
-                        Style="{StaticResource BodyStrongTextBlockStyle}"
-                        Text="Gom nhóm thông minh theo tên tệp"
-                        TextWrapping="Wrap" />
-                    <HyperlinkButton
-                        Grid.Column="1"
-                        Click="OnOpenSmartGroupingGuideClick"
-                        Padding="6,2">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <FontIcon FontSize="13" Glyph="&#xE897;" />
-                            <TextBlock FontSize="12.5" Text="Xem hình minh họa &amp; Mô phỏng 3 chế độ gom cụm" TextWrapping="Wrap" />
-                        </StackPanel>
-                    </HyperlinkButton>
-                </Grid>
-
-                <!-- Thẻ bật tắt chính Smart Grouping -->
-                <Border Padding="16,14" Style="{StaticResource FluentCardStyle}">
+                <!-- Thẻ 1: Gom cụm tệp giống tên -->
+                <Border Padding="16,12" Style="{StaticResource FluentCardStyle}">
                     <Grid ColumnSpacing="14">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
@@ -96,28 +121,42 @@
                             <FontIcon FontSize="17" Glyph="&#xE945;" />
                         </Border>
 
-                        <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                             <TextBlock
                                 Style="{StaticResource BodyStrongTextBlockStyle}"
-                                Text="Bật gom cụm tệp giống tên (Smart Grouping)"
+                                Text="Gom cụm tệp giống tên"
                                 TextWrapping="Wrap" />
                             <TextBlock
                                 FontSize="12.5"
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                Text="Tự động nhận diện các tệp có chung phần gốc hoặc tên gần giống nhau (ví dụ: Book_Exported.docx, Book_Exported (1).docx) để gom vào một thư mục riêng."
+                                Text="Ví dụ: BaoCao_1.docx, BaoCao_2.docx → tự gom vào thư mục BaoCao"
                                 TextWrapping="Wrap" />
                         </StackPanel>
 
-                        <ToggleSwitch
+                        <Button
                             Grid.Column="2"
+                            VerticalAlignment="Center"
+                            Command="{x:Bind ViewModel.ToggleSmartGroupingAdvancedCommand}"
+                            Padding="10,5">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon FontSize="12" Glyph="&#xE713;" />
+                                <TextBlock FontSize="12" Text="Tùy chọn nâng cao" />
+                            </StackPanel>
+                        </Button>
+
+                        <ToggleSwitch
+                            Grid.Column="3"
                             MinWidth="0"
                             VerticalAlignment="Center"
                             IsOn="{x:Bind ViewModel.EnablePrefixSimilarityGrouping, Mode=TwoWay}" />
                     </Grid>
                 </Border>
 
-                <!-- Các thẻ tùy chọn con chuẩn responsive -->
-                <StackPanel Margin="16,0,0,0" Spacing="8">
+                <!-- Tùy chọn nâng cao (thu gọn mặc định) -->
+                <StackPanel
+                    Margin="16,0,0,0"
+                    Spacing="8"
+                    Visibility="{x:Bind ViewModel.IsSmartGroupingAdvancedOpen, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                     <Border Padding="16,12" Style="{StaticResource FluentCardStyle}">
                         <Grid ColumnSpacing="14">
                             <Grid.ColumnDefinitions>
@@ -125,21 +164,21 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel Spacing="3" VerticalAlignment="Center">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock
                                     Style="{StaticResource BodyStrongTextBlockStyle}"
                                     Text="Số tệp tối thiểu tạo thư mục cụm"
                                     TextWrapping="Wrap" />
                                 <TextBlock
-                                    FontSize="12.5"
+                                    FontSize="12"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Text="Chỉ gom nhóm khi tìm thấy ít nhất N tệp giống tên nhau (mặc định 2). Nếu chỉ có 1 tệp lẻ thì không tạo thư mục cụm mà chuyển sang xử lý theo quy tắc đuôi tệp."
+                                    Text="Chỉ gom nhóm khi có ít nhất N tệp giống tên nhau (mặc định 2)."
                                     TextWrapping="Wrap" />
                             </StackPanel>
 
                             <NumberBox
                                 Grid.Column="1"
-                                Width="156"
+                                Width="150"
                                 VerticalAlignment="Center"
                                 Minimum="2"
                                 Maximum="10"
@@ -155,15 +194,15 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel Spacing="3" VerticalAlignment="Center">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock
                                     Style="{StaticResource BodyStrongTextBlockStyle}"
                                     Text="Ngưỡng độ tương đồng tên (%)"
                                     TextWrapping="Wrap" />
                                 <TextBlock
-                                    FontSize="12.5"
+                                    FontSize="12"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Text="Tỷ lệ giống nhau giữa hai tên tệp (mặc định 80%). Giá trị càng cao thì điều kiện gom càng chặt."
+                                    Text="Tỷ lệ giống nhau giữa hai tên tệp (mặc định 80%)."
                                     TextWrapping="Wrap" />
                             </StackPanel>
 
@@ -195,15 +234,15 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel Spacing="3" VerticalAlignment="Center">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock
                                     Style="{StaticResource BodyStrongTextBlockStyle}"
                                     Text="Đặt các cụm tên vào thư mục cha chung"
                                     TextWrapping="Wrap" />
                                 <TextBlock
-                                    FontSize="12.5"
+                                    FontSize="12"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Text="Gom các cụm tên chưa có quy tắc phân loại riêng vào chung 1 thư mục cha này (ví dụ: Gom theo tên\GGKEY_01) thay vì tạo ngoài thư mục gốc."
+                                    Text="Ví dụ: Gom theo tên\BaoCao thay vì tạo trực tiếp ở thư mục gốc."
                                     TextWrapping="Wrap" />
                             </StackPanel>
 
@@ -230,15 +269,15 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel Spacing="3" VerticalAlignment="Center">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock
                                     Style="{StaticResource BodyStrongTextBlockStyle}"
                                     Text="Lồng cụm tên vào thư mục của quy tắc"
                                     TextWrapping="Wrap" />
                                 <TextBlock
-                                    FontSize="12.5"
+                                    FontSize="12"
                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Text="Nếu các tệp giống tên đã khớp một quy tắc đang bật, tạo thư mục cụm lồng bên trong thư mục đích của quy tắc đó (ví dụ: Tài liệu\BaoCao hay Book test\Book_Exported)."
+                                    Text="Tạo thư mục cụm lồng bên trong thư mục đích của quy tắc đã khớp (VD: Tài liệu\BaoCao)."
                                     TextWrapping="Wrap" />
                             </StackPanel>
 
@@ -249,10 +288,57 @@
                                 IsOn="{x:Bind ViewModel.GroupPrefixInsideCategory, Mode=TwoWay}" />
                         </Grid>
                     </Border>
+
+                    <HyperlinkButton
+                        Click="OnOpenSmartGroupingGuideClick"
+                        Padding="4,2">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <FontIcon FontSize="13" Glyph="&#xE897;" />
+                            <TextBlock FontSize="12.5" Text="Xem hình minh họa &amp; Mô phỏng 3 chế độ gom cụm" />
+                        </StackPanel>
+                    </HyperlinkButton>
                 </StackPanel>
+
+                <!-- Thẻ 2: Gom theo Năm-Tháng -->
+                <Border Padding="16,12" Style="{StaticResource FluentCardStyle}">
+                    <Grid ColumnSpacing="14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border
+                            Width="36"
+                            Height="36"
+                            VerticalAlignment="Center"
+                            Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                            CornerRadius="8">
+                            <FontIcon FontSize="17" Glyph="&#xE787;" />
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="Gom theo Năm-Tháng (VD: 2026-11)"
+                                TextWrapping="Wrap" />
+                            <TextBlock
+                                FontSize="12.5"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="Tự động xếp tệp vào thư mục tháng sửa đổi — rất phù hợp cho Ảnh và Video"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <ToggleSwitch
+                            Grid.Column="2"
+                            MinWidth="0"
+                            VerticalAlignment="Center"
+                            IsOn="{x:Bind ViewModel.EnableFolderMonthGrouping, Mode=TwoWay}" />
+                    </Grid>
+                </Border>
             </StackPanel>
 
-            <!-- Nhóm 2: Danh sách quy tắc phân loại -->
+            <!-- Danh sách quy tắc phân loại của thư mục đang chọn -->
             <StackPanel Spacing="10">
                 <Grid ColumnSpacing="12">
                     <Grid.ColumnDefinitions>
@@ -262,7 +348,7 @@
                     <TextBlock
                         VerticalAlignment="Center"
                         Style="{StaticResource BodyStrongTextBlockStyle}"
-                        Text="Danh sách quy tắc theo định dạng &amp; từ khóa"
+                        Text="Danh sách quy tắc phân loại"
                         TextWrapping="Wrap" />
                     <StackPanel
                         Grid.Column="1"
@@ -271,11 +357,6 @@
                         VerticalAlignment="Center">
                         <Button Click="OnEnableAllRulesClick" Content="Bật tất cả" />
                         <Button Click="OnDisableAllRulesClick" Content="Tắt tất cả" />
-                        <ToggleSwitch
-                            IsOn="{x:Bind ViewModel.EnableKeywordRules, Mode=TwoWay}"
-                            MinWidth="0"
-                            OffContent="So khớp từ khóa: Tắt"
-                            OnContent="So khớp từ khóa: Bật" />
                     </StackPanel>
                 </Grid>
 
@@ -358,7 +439,7 @@
                                         Spacing="8"
                                         VerticalAlignment="Center">
                                         <ToggleSwitch
-                                            IsOn="{x:Bind IsEnabled, Mode=OneTime}"
+                                            IsOn="{x:Bind IsEnabled, Mode=OneWay}"
                                             MinWidth="0"
                                             Tag="{x:Bind Mode=OneTime}"
                                             Toggled="OnRuleToggled" />
